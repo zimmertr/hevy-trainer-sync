@@ -32,10 +32,14 @@ def main(argv: list[str] | None = None) -> int:
     state_file = env("HEVY_STATE_FILE", "/state/hevy-session.json")
     tokens = state.load(state_file)
     if tokens is None:
-        # First run: the refresh token pasted from the hevy.com cookie. After this
-        # the file is the only valid copy, because the token rotates.
-        tokens = {"refresh_token": env("HEVY_REFRESH_TOKEN")}
-        log.info("no state at %s, bootstrapping from HEVY_REFRESH_TOKEN", state_file)
+        # First run: the hevy.com cookie, pasted whole. After this the file is
+        # the only valid copy, because the refresh token rotates.
+        try:
+            tokens = state.bootstrap(env("HEVY_SESSION"))
+        except ValueError as e:
+            log.error("%s", e)
+            return 2
+        log.info("no state at %s, bootstrapping from HEVY_SESSION", state_file)
 
     session = Session(tokens, lambda t: state.save(state_file, t))
     program = session.get_program()

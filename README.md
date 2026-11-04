@@ -18,7 +18,7 @@ Hevy's private API is undocumented and can change without notice. The public API
 
 - Hevy Pro, for the API key at https://hevy.com/settings?developer.
 - A hevy2garmin dashboard with Garmin connected, reachable from wherever this runs.
-- The `auth2.0-token` cookie from a logged-in hevy.com tab. Open DevTools, Application, Cookies, copy the value, URL-decode it, and take the `refresh_token` field. It is only used once: the token rotates on every refresh, so after the first run the state file is the only valid copy.
+- The `auth2.0-token` cookie from a logged-in hevy.com tab. Open DevTools, Application, Cookies, and copy the value as it is; URL-encoded is fine. Both tokens in it are needed, because Hevy's refresh endpoint wants the old access token alongside the refresh token. It is only used once: the refresh token rotates on every refresh, so after the first run the state file is the only valid copy.
 
 ## Configuration
 
@@ -27,7 +27,7 @@ Everything is environment variables.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `HEVY_API_KEY` | | Public API key |
-| `HEVY_REFRESH_TOKEN` | | Bootstrap refresh token, read only when the state file is missing |
+| `HEVY_SESSION` | | The `auth2.0-token` cookie value, read only when the state file is missing |
 | `HEVY_STATE_FILE` | `/state/hevy-session.json` | Where the rotating session tokens live. Must persist between runs. |
 | `H2G_URL` | `http://hevy2garmin` | hevy2garmin dashboard |
 | `H2G_PASSWORD` | | Its login password |
