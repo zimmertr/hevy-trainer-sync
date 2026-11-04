@@ -35,6 +35,10 @@ class Session:
         return exp <= datetime.now(timezone.utc)
 
     def refresh(self) -> None:
+        # Verified 4 Nov 2026: without the Bearer header, expired or not, Hevy
+        # answers 400 "Bad Request" rather than anything that names the cause.
+        if not self.tokens.get("access_token"):
+            raise RuntimeError("cannot refresh without an access token; bootstrap from the whole auth2.0-token cookie")
         body, _ = request("POST", f"{BASE}/auth/refresh_token", headers=self._headers(),
                           body={"refresh_token": self.tokens["refresh_token"]})
         if not isinstance(body, dict) or not body.get("access_token"):
