@@ -69,14 +69,14 @@ def main(argv: list[str] | None = None) -> int:
     existing = {r["title"]: r for r in hevy.routines() if r.get("folder_id") == folder_id} if folder_id is not None else {}
 
     # Every routine this job owns, by base title, whether it existed or was just made.
-    cycle_weeks = int(env("CYCLE_WEEKS", "3"))
-    current_week = program.get("current_week")
+    week = build.program_week(program.get("created_at"))
+    log.info("program week %s (started %s)", week, program.get("created_at"))
     managed: dict[str, str] = {}
     changed: list[str] = []
     for t in templates:
         base = build.title_from_key(t["key"])
         payload = build.routine_from_template(t, folder_id, weights, NOTES,
-                                              title_override=build.title(t["key"], current_week, cycle_weeks))
+                                              title_override=build.title(t["key"], week))
         # Matched by base title, so a routine named for last week is renamed, not duplicated.
         current = next((r for title, r in existing.items() if build.is_titled_from(title, t["key"])), None)
         if current:

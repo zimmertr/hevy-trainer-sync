@@ -1,6 +1,7 @@
 """Pure functions: Trainer template in, routine payload out. No I/O, so this is what the tests cover."""
 
 import re
+from datetime import datetime, timezone
 
 _FREQ = re.compile(r"^\d+x$")
 
@@ -19,24 +20,33 @@ def title_from_key(key: str) -> str:
     return " ".join(words) or key
 
 
-def title(key: str, current_week: int | None, cycle_weeks: int) -> str:
-    """'Upper C2-W2': the base title plus where Trainer's program stands.
+def program_week(created_at: str | None, now: datetime | None = None) -> int | None:
+    """Calendar weeks since the program started, 1-based: what the app's cycle and week multiply out to.
 
-    The program only reports `current_week`; the app shows it as a cycle and a
-    week within it, so the cycle length is a setting here. A wrong title is
-    the point of the suffix: it is the quickest way to see a run didn't land.
+    The program's own `current_week` is not this (it read 5 when the app showed
+    cycle 2, week 2 of a 6-week cycle, i.e. week 8), so it is not used.
     """
+    if not created_at:
+        return None
+    try:
+        start = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    now = now or datetime.now(timezone.utc)
+    days = (now - start).days
+    return days // 7 + 1 if days >= 0 else None
+
+
+def title(key: str, week: int | None) -> str:
+    """'Upper W8': the base title plus the program week, so a stale watch is obvious at a glance."""
     base = title_from_key(key)
-    if not isinstance(current_week, int) or current_week < 1 or cycle_weeks < 1:
-        return base
-    cycle, week = divmod(current_week - 1, cycle_weeks)
-    return f"{base} C{cycle + 1}-W{week + 1}"
+    return f"{base} W{week}" if isinstance(week, int) and week >= 1 else base
 
 
 def is_titled_from(routine_title: str, key: str) -> bool:
     """Whether an existing routine is this template's, whatever week it was named for."""
     base = title_from_key(key)
-    return routine_title == base or routine_title.startswith(f"{base} C")
+    return routine_title == base or routine_title.startswith(f"{base} W")
 
 
 def routine_from_template(template: dict, folder_id: int | None, weights_kg: dict[str, float], notes: str,

@@ -81,23 +81,32 @@ if __name__ == "__main__":
     unittest.main()
 
 
-class CycleWeekTitleTest(unittest.TestCase):
-    def test_week_five_of_three_week_cycles_is_c2_w2(self):
-        self.assertEqual(build.title("upper_2x_a", 5, 3), "Upper C2-W2")
-        self.assertEqual(build.title("lower_2x_a", 1, 3), "Lower C1-W1")
-        self.assertEqual(build.title("lower_2x_a", 3, 3), "Lower C1-W3")
-        self.assertEqual(build.title("lower_2x_a", 4, 3), "Lower C2-W1")
+class ProgramWeekTitleTest(unittest.TestCase):
+    def test_week_counts_from_the_program_start(self):
+        from datetime import datetime, timezone
+        start = "2026-09-14T20:26:40.922Z"
+        self.assertEqual(build.program_week(start, datetime(2026, 9, 14, 21, tzinfo=timezone.utc)), 1)
+        self.assertEqual(build.program_week(start, datetime(2026, 9, 21, 19, tzinfo=timezone.utc)), 1)
+        self.assertEqual(build.program_week(start, datetime(2026, 9, 21, 21, tzinfo=timezone.utc)), 2)
+        # 4 Nov 2026: the app showed cycle 2, week 2 of a 6-week cycle.
+        self.assertEqual(build.program_week(start, datetime(2026, 11, 4, 23, tzinfo=timezone.utc)), 8)
 
-    def test_no_week_means_no_suffix(self):
-        self.assertEqual(build.title("upper_2x_a", None, 3), "Upper")
-        self.assertEqual(build.title("upper_2x_a", 5, 0), "Upper")
+    def test_bad_or_missing_start_means_no_week(self):
+        self.assertIsNone(build.program_week(None))
+        self.assertIsNone(build.program_week("not a date"))
+        from datetime import datetime, timezone
+        self.assertIsNone(build.program_week("2026-09-14T20:26:40Z", datetime(2026, 9, 1, tzinfo=timezone.utc)))
+
+    def test_title_with_and_without_week(self):
+        self.assertEqual(build.title("upper_2x_a", 8), "Upper W8")
+        self.assertEqual(build.title("full_body_3x_b", None), "Full Body")
 
     def test_existing_routine_is_recognised_across_weeks(self):
         self.assertTrue(build.is_titled_from("Upper", "upper_2x_a"))
-        self.assertTrue(build.is_titled_from("Upper C1-W3", "upper_2x_a"))
+        self.assertTrue(build.is_titled_from("Upper W7", "upper_2x_a"))
         self.assertFalse(build.is_titled_from("Upper Body", "upper_2x_a"))
-        self.assertFalse(build.is_titled_from("Lower C1-W3", "upper_2x_a"))
+        self.assertFalse(build.is_titled_from("Lower W7", "upper_2x_a"))
 
     def test_override_sets_the_payload_title(self):
-        r = build.routine_from_template(TEMPLATE, 7, {}, "n", title_override="Upper C2-W2")
-        self.assertEqual(r["title"], "Upper C2-W2")
+        r = build.routine_from_template(TEMPLATE, 7, {}, "n", title_override="Upper W8")
+        self.assertEqual(r["title"], "Upper W8")
