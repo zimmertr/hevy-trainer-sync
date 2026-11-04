@@ -37,6 +37,23 @@ def bootstrap(raw: str) -> dict:
     return {"access_token": data["access_token"], "refresh_token": data["refresh_token"], "expires_at": data.get("expires_at")}
 
 
+def load_or_bootstrap(path: str, raw: str | None) -> tuple[dict, bool]:
+    """The saved tokens, or the cookie's, written to `path` at once.
+
+    Saving here, not only after a refresh, is what makes the cookie single-use:
+    a first run inside the cookie's access-token lifetime never refreshes, and
+    without this it would leave no file and bootstrap again next run.
+    """
+    tokens = load(path)
+    if tokens is not None:
+        return tokens, False
+    if not raw:
+        raise ValueError(f"no state at {path} and HEVY_SESSION is not set")
+    tokens = bootstrap(raw)
+    save(path, tokens)
+    return tokens, True
+
+
 def load(path: str) -> dict | None:
     try:
         with open(path) as f:

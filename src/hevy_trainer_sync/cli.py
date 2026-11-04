@@ -30,16 +30,16 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
     state_file = env("HEVY_STATE_FILE", "/state/hevy-session.json")
-    tokens = state.load(state_file)
-    if tokens is None:
-        # First run: the hevy.com cookie, pasted whole. After this the file is
-        # the only valid copy, because the refresh token rotates.
-        try:
-            tokens = state.bootstrap(env("HEVY_SESSION"))
-        except ValueError as e:
-            log.error("%s", e)
-            return 2
-        log.info("no state at %s, bootstrapping from HEVY_SESSION", state_file)
+    # First run: the hevy.com cookie, pasted whole, saved to the state file at
+    # once. After this the file is the only valid copy, because the refresh
+    # token rotates.
+    try:
+        tokens, bootstrapped = state.load_or_bootstrap(state_file, os.environ.get("HEVY_SESSION"))
+    except ValueError as e:
+        log.error("%s", e)
+        return 2
+    if bootstrapped:
+        log.info("no state at %s, bootstrapped from HEVY_SESSION and saved it", state_file)
 
     session = Session(tokens, lambda t: state.save(state_file, t))
     program = session.get_program()
