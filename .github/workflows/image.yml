@@ -36,3 +36,61 @@ jobs:
           tags: |
             zimmertr/hevy-trainer-sync:${{ github.sha }}
             zimmertr/hevy-trainer-sync:latest
+
+  # Bump the pinned tag in Kubernetes-Manifests so Argo CD rolls the new build
+  # out. Same shape as bluebird's release workflow: a fixed branch force-pushed
+  # fresh off main each time, one self-merging PR, so rapid merges collapse into
+  # a single up-to-date PR instead of a pile. GH_PAT needs contents and
+  # pull-requests write on zimmertr/Kubernetes-Manifests.
+  update-manifests:
+    needs: image
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install kustomize
+        env:
+          KUSTOMIZE_VERSION: 5.4.3
+          KUSTOMIZE_SHA256: 3669470b454d865c8184d6bce78df05e977c9aea31c30df3c669317d43bcc7a7
+        run: |
+          TARBALL="kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL -o "$RUNNER_TEMP/$TARBALL" \
+            "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/${TARBALL}"
+          echo "${KUSTOMIZE_SHA256}  $RUNNER_TEMP/$TARBALL" | sha256sum --check --strict
+          mkdir -p "$RUNNER_TEMP/bin"
+          tar -xzf "$RUNNER_TEMP/$TARBALL" -C "$RUNNER_TEMP/bin" kustomize
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Open or update the image bump PR
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          SHA: ${{ github.sha }}
+          APP_REPO: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+        run: |
+          BR="chore/hevy-trainer-sync-image"
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/zimmertr/Kubernetes-Manifests.git" k8s-manifests
+          cd k8s-manifests
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BR" origin/main
+          (cd misc/hevy2garmin && kustomize edit set image "zimmertr/hevy-trainer-sync=zimmertr/hevy-trainer-sync:${SHA}")
+          if git diff --quiet; then
+            echo "Manifests already at ${SHA}; nothing to bump."
+            exit 0
+          fi
+          SHORT="${SHA:0:7}"
+          git commit -am "chore(hevy2garmin): bump hevy-trainer-sync to ${SHORT}"
+          git push -f origin "$BR"
+
+          TITLE="chore(hevy2garmin): bump hevy-trainer-sync to ${SHORT}"
+          BODY="Automated by hevy-trainer-sync CI. Pins \`zimmertr/hevy-trainer-sync:${SHA}\`.
+
+          - Commit: ${SERVER_URL}/${APP_REPO}/commit/${SHA}"
+          PR_NUM="$(gh pr list --head "$BR" --state open --json number -q '.[0].number')"
+          if [ -n "$PR_NUM" ]; then
+            gh pr edit "$PR_NUM" --title "$TITLE" --body "$BODY"
+          else
+            gh pr create --base main --head "$BR" --title "$TITLE" --body "$BODY"
+          fi
+          # Auto-merge is disarmed by every force-push, so re-arm each time. The
+          # fallback covers checks that are already green, where --auto is refused.
+          gh pr merge --auto --squash "$BR" || gh pr merge --squash "$BR"
