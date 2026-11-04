@@ -19,7 +19,28 @@ def title_from_key(key: str) -> str:
     return " ".join(words) or key
 
 
-def routine_from_template(template: dict, folder_id: int | None, weights_kg: dict[str, float], notes: str) -> dict:
+def title(key: str, current_week: int | None, cycle_weeks: int) -> str:
+    """'Upper C2-W2': the base title plus where Trainer's program stands.
+
+    The program only reports `current_week`; the app shows it as a cycle and a
+    week within it, so the cycle length is a setting here. A wrong title is
+    the point of the suffix: it is the quickest way to see a run didn't land.
+    """
+    base = title_from_key(key)
+    if not isinstance(current_week, int) or current_week < 1 or cycle_weeks < 1:
+        return base
+    cycle, week = divmod(current_week - 1, cycle_weeks)
+    return f"{base} C{cycle + 1}-W{week + 1}"
+
+
+def is_titled_from(routine_title: str, key: str) -> bool:
+    """Whether an existing routine is this template's, whatever week it was named for."""
+    base = title_from_key(key)
+    return routine_title == base or routine_title.startswith(f"{base} C")
+
+
+def routine_from_template(template: dict, folder_id: int | None, weights_kg: dict[str, float], notes: str,
+                          title_override: str | None = None) -> dict:
     """A create/update payload for the public API, in Trainer's exercise order.
 
     Warm-up sets carry no weight: Trainer decides those on the day. Working sets
@@ -42,7 +63,7 @@ def routine_from_template(template: dict, folder_id: int | None, weights_kg: dic
             "notes": None,
             "sets": sets,
         })
-    return {"title": title_from_key(template["key"]), "folder_id": folder_id, "notes": notes, "exercises": exercises}
+    return {"title": title_override or title_from_key(template["key"]), "folder_id": folder_id, "notes": notes, "exercises": exercises}
 
 
 def _norm_set(s: dict) -> tuple:

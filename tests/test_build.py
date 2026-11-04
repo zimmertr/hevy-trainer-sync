@@ -79,3 +79,25 @@ class WeightsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CycleWeekTitleTest(unittest.TestCase):
+    def test_week_five_of_three_week_cycles_is_c2_w2(self):
+        self.assertEqual(build.title("upper_2x_a", 5, 3), "Upper C2-W2")
+        self.assertEqual(build.title("lower_2x_a", 1, 3), "Lower C1-W1")
+        self.assertEqual(build.title("lower_2x_a", 3, 3), "Lower C1-W3")
+        self.assertEqual(build.title("lower_2x_a", 4, 3), "Lower C2-W1")
+
+    def test_no_week_means_no_suffix(self):
+        self.assertEqual(build.title("upper_2x_a", None, 3), "Upper")
+        self.assertEqual(build.title("upper_2x_a", 5, 0), "Upper")
+
+    def test_existing_routine_is_recognised_across_weeks(self):
+        self.assertTrue(build.is_titled_from("Upper", "upper_2x_a"))
+        self.assertTrue(build.is_titled_from("Upper C1-W3", "upper_2x_a"))
+        self.assertFalse(build.is_titled_from("Upper Body", "upper_2x_a"))
+        self.assertFalse(build.is_titled_from("Lower C1-W3", "upper_2x_a"))
+
+    def test_override_sets_the_payload_title(self):
+        r = build.routine_from_template(TEMPLATE, 7, {}, "n", title_override="Upper C2-W2")
+        self.assertEqual(r["title"], "Upper C2-W2")
