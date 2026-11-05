@@ -62,10 +62,15 @@ def routine_from_template(template: dict, folder_id: int | None, weights_kg: dic
         tid = ex["exercise_template_id"]
         rr = ex.get("rep_range") or {}
         rep_range = {"start": rr["start"], "end": rr["end"]} if "start" in rr and "end" in rr else None
-        sets = [{"type": "warmup", "weight_kg": None, "reps": None, "rep_range": None}
-                for _ in range(int(ex.get("warmup_set_count") or 0))]
-        sets += [{"type": "normal", "weight_kg": weights_kg.get(tid), "reps": None, "rep_range": rep_range}
-                 for _ in range(int(ex.get("set_count") or 0))]
+        # rep_range is sent only when there is one. POST /routines accepts
+        # rep_range: null, but PUT /routines/{id} rejects it with "Expected
+        # object, received null", which failed the first rename on 2026-11-05.
+        warmup = {"type": "warmup", "weight_kg": None, "reps": None}
+        working = {"type": "normal", "weight_kg": weights_kg.get(tid), "reps": None}
+        if rep_range:
+            working["rep_range"] = rep_range
+        sets = [dict(warmup) for _ in range(int(ex.get("warmup_set_count") or 0))]
+        sets += [dict(working) for _ in range(int(ex.get("set_count") or 0))]
         exercises.append({
             "exercise_template_id": tid,
             "superset_id": None,

@@ -35,6 +35,17 @@ class RoutineTest(unittest.TestCase):
         self.assertEqual(a["sets"][2]["rep_range"], {"start": 4, "end": 6})
         self.assertIsNone(r["exercises"][1]["sets"][0]["weight_kg"])  # unknown weight stays empty
 
+    def test_never_sends_rep_range_null(self):
+        # PUT /routines/{id} rejects rep_range: null ("Expected object, received null").
+        no_range = {"key": "lower_2x_a", "exercises": [
+            {"exercise_template_id": "C", "index": 0, "set_count": 2, "warmup_set_count": 1, "rest_seconds": 60}]}
+        for template in (TEMPLATE, no_range):
+            r = build.routine_from_template(template, 7, {}, "n")
+            for ex in r["exercises"]:
+                for s in ex["sets"]:
+                    self.assertFalse("rep_range" in s and s["rep_range"] is None, s)
+        self.assertNotIn("rep_range", build.routine_from_template(TEMPLATE, 7, {}, "n")["exercises"][0]["sets"][0])
+
     def test_normalize_matches_get_response_shape(self):
         payload = build.routine_from_template(TEMPLATE, 7, {"A": 36.29}, "n")
         # What GET /v1/routines returns: extra fields, index, title, float weight.
