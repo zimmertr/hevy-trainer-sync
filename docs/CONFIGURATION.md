@@ -18,10 +18,14 @@ Everything is environment variables and two flags. There is no config file. The 
 | `GARMIN_DEVICE_ID` | last-used device | | `cli.send_to_device` | The Garmin device to send to |
 | `SCHEDULE_NEXT` | `0` | | `cli.py` | `1` also puts the next workout on today's Garmin calendar. Record: [0008](decisions/0008-no-calendar-scheduling.md) |
 | `TZ` | `UTC` | | `schedule.today_in` | Which day "today" is for the calendar |
+| `CRON_SECRET` | | `poll` only | `poll.main` | hevy2garmin's cron secret, sent as a bearer to its webhook route |
+| `POLL_SECONDS` | `60` | | `poll.main` | How often `poll` reads Hevy's workout events |
 
 An empty string counts as unset. A required variable that is missing exits with status 2 and names it.
 
-## Flags
+## Modes and flags
+
+`python -m hevy_trainer_sync` runs the mirror once. `python -m hevy_trainer_sync poll` runs the poller until stopped; it reads only `HEVY_API_KEY`, `H2G_URL`, `CRON_SECRET` and `POLL_SECONDS`, and takes no flags. The mirror's flags:
 
 | Flag | Effect |
 |---|---|
@@ -41,7 +45,19 @@ Kubernetes-Manifests `misc/hevy2garmin/resources/trainer-sync.yml` sets:
 | `HEVY_STATE_FILE` | `/state/hevy-session.json` on PVC `hevy-trainer-sync-state` |
 | `DATABASE_URL` | Secret `hevy2garmin-database-app`, key `uri` |
 
-Everything else takes its default. To run once with a flag, create a Job from the CronJob and add the argument:
+Everything else takes its default.
+
+`misc/hevy2garmin/resources/trainer-poll.yml` runs the poller with args `poll` and sets:
+
+| Variable | Source |
+|---|---|
+| `HEVY_API_KEY` | Secret `hevy2garmin`, key `hevy-api-key` |
+| `H2G_URL` | `http://hevy2garmin` |
+| `CRON_SECRET` | Secret `hevy2garmin`, key `cron-secret` |
+
+hevy2garmin's own Deployment sets `WEBHOOK_DELAY_SECONDS=60`, `WEBHOOK_RETRY_INTERVAL_SECONDS=180` and `WEBHOOK_MAX_ATTEMPTS=10`, which shape what happens after the poller calls it. Record: [0019](decisions/0019-poll-hevy-every-minute.md).
+
+To run the mirror once with a flag, create a Job from the CronJob and add the argument:
 
 ```sh
 kubectl -n hevy2garmin-system create job --from=cronjob/hevy-trainer-sync hevy-trainer-sync-force --dry-run=client -o json \

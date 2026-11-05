@@ -1,6 +1,6 @@
 # hevy-trainer-sync
 
-Mirrors the Hevy Trainer program into Hevy routines, has hevy2garmin turn them into Garmin workouts, and sends those to the watch. One Python command, run hourly as a Kubernetes CronJob. Start with [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Mirrors the Hevy Trainer program into Hevy routines, has hevy2garmin turn them into Garmin workouts, and sends those to the watch. One Python command, run hourly as a Kubernetes CronJob, plus a `poll` mode that runs as a Deployment and starts hevy2garmin's merge as soon as a workout is saved. Start with [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Documentation
 
@@ -26,6 +26,7 @@ Every decision gets a record in the same PR that makes it, and the rule below th
 - It runs hourly as CronJob `hevy-trainer-sync`, one run at a time. Record: [0007](docs/decisions/0007-hourly-cronjob.md)
 - The routines stay in Hevy; hevy2garmin is keyed on their ids. Record: [0014](docs/decisions/0014-routines-stay-in-hevy.md)
 - Garmin's own Strava connection stays on, so the first Strava post is the watch's version until the merge lands. Record: [0016](docs/decisions/0016-garmin-keeps-posting-to-strava.md)
+- `poll` reads Hevy's workout events every 60 seconds from inside the cluster and calls hevy2garmin's webhook route for each new workout, so the merge lands within minutes. Nothing is exposed, and the poller never touches the Hevy session. Record: [0019](docs/decisions/0019-poll-hevy-every-minute.md)
 
 ## Rules
 

@@ -13,7 +13,7 @@ TJ wants a session on Strava complete the moment it is posted. Garmin forwards t
 
 ## Decision
 
-Garmin keeps forwarding activities to Strava. This tool does not upload to Strava. The gap is narrowed instead by merging sooner after the workout.
+Garmin keeps forwarding activities to Strava. This tool does not upload to Strava. The gap is narrowed instead by merging within minutes of the workout ([0019](0019-poll-hevy-every-minute.md)).
 
 ## Evidence
 

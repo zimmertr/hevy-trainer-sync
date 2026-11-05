@@ -1,6 +1,6 @@
 # Architecture
 
-hevy-trainer-sync is one Python command that runs to completion and exits. It owns no database and serves nothing. It reads Hevy Trainer's program, writes Hevy routines, and drives two systems that already exist: the hevy2garmin dashboard and Garmin Connect. Everything it knows between runs is one file: the Hevy session on a persistent volume.
+hevy-trainer-sync is one Python package with two modes. The default mode runs to completion and exits: it reads Hevy Trainer's program, writes Hevy routines, and drives two systems that already exist, the hevy2garmin dashboard and Garmin Connect. The `poll` mode runs forever and only watches Hevy for saved workouts. It owns no database and serves nothing. Everything it knows between runs is one file: the Hevy session on a persistent volume, which only the default mode uses.
 
 ## The two flows
 
@@ -25,13 +25,26 @@ flowchart LR
         F2[Fenix] -->|phone sync| A[Garmin activity]
         A -->|forwarded in seconds| S[Strava]
         P[Hevy app] -->|Finish| HW[Hevy workout]
-        HW --> M[hevy2garmin merge]
+        HW -->|workout event| PL[hevy-trainer-sync poll<br/>every 60 s]
+        PL -->|POST /api/cron/webhook| M[hevy2garmin merge]
+        HW --> M
         A --> M
         M -->|PUT exercise sets| A
     end
 ```
 
-Garmin forwards the watch's activity to Strava before the merge can run, so the first Strava post is the watch's version and the merged sets land on it later. [0016](decisions/0016-garmin-keeps-posting-to-strava.md) keeps it that way for now.
+Garmin forwards the watch's activity to Strava before the merge can run, so the first Strava post is the watch's version and the merged sets land on it later. [0016](decisions/0016-garmin-keeps-posting-to-strava.md) keeps it that way for now. The poller makes "later" a few minutes instead of two hours.
+
+## The poller
+
+`python -m hevy_trainer_sync poll` (`poll.main()`) loops every `POLL_SECONDS`:
+
+1. `hevy_public.Client.workout_events()` reads every event since the high-water mark, which starts one interval before the process did.
+2. `poll.new_workouts()` keeps the `updated` events whose `updated_at` is after the mark, oldest first.
+3. For each one, `h2g.trigger_merge()` posts to hevy2garmin's `POST /api/cron/webhook` with `CRON_SECRET`. hevy2garmin answers at once and runs its staged sync in the background: merge-only attempts while the watch's activity reaches Garmin, then a fresh upload on the last attempt.
+4. The mark moves to the last workout that was handed over. If Hevy or hevy2garmin fails, the mark stays put and the next poll tries again.
+
+It needs only the public API key and the cron secret. It never reads or refreshes the Hevy session, so it cannot break the mirror's token chain. Record: [0019](decisions/0019-poll-hevy-every-minute.md).
 
 ## One run
 
@@ -52,11 +65,12 @@ Garmin forwards the watch's activity to Strava before the merge can run, so the 
 
 | Module | Does | I/O |
 |---|---|---|
-| `cli.py` | The run above | Orchestrates the rest |
+| `cli.py` | The run above, and dispatch of `poll` | Orchestrates the rest |
+| `poll.py` | The poller loop, the event filter, the high-water mark | Hevy public API, hevy2garmin |
 | `state.py` | Bootstrap from the cookie, atomic save with mode 0600 | The state file |
 | `hevy_private.py` | Session refresh and the Trainer program | Hevy private API |
 | `hevy_public.py` | Folders, routines, recent workouts | Hevy public API |
-| `h2g.py` | Dashboard login, routine sync, schedule and unschedule | hevy2garmin HTTP |
+| `h2g.py` | Dashboard login, routine sync, schedule and unschedule, and `trigger_merge` | hevy2garmin HTTP |
 | `db.py` | Read-only queries; `psycopg` is imported lazily | hevy2garmin Postgres |
 | `garmin.py` | Last-used device and the device message | Garmin Connect |
 | `build.py` | Template to payload, names, weeks, comparison | None |
@@ -72,8 +86,9 @@ It runs in TJ's cluster next to hevy2garmin, in namespace `hevy2garmin-system`, 
 | Object | What |
 |---|---|
 | CronJob `hevy-trainer-sync` | `7 * * * *`, `concurrencyPolicy: Forbid`, `backoffLimit: 0`, 600 s deadline, UID 1000, read-only root filesystem. Record: [0007](decisions/0007-hourly-cronjob.md) |
+| Deployment `hevy-trainer-poll` | One replica, `Recreate`, args `poll`, same image, no volume, UID 1000, read-only root filesystem |
 | PVC `hevy-trainer-sync-state` | 1 Gi on `proxmox-flashpool`, mounted at `/state`. Holds `hevy-session.json` and nothing else |
-| Secret `hevy2garmin` | Keys `hevy-api-key`, `password`, and `hevy-session` (only needed until the first run) |
+| Secret `hevy2garmin` | Keys `hevy-api-key`, `password`, `cron-secret` (the poller), and `hevy-session` (only needed until the first run) |
 | Secret `hevy2garmin-database-app` | Key `uri`, made by CloudNativePG for hevy2garmin's cluster |
 
 The job talks to the dashboard through its Service, `http://hevy2garmin`, and to Postgres through the CNPG service in the `uri`. Nothing reaches it from outside.

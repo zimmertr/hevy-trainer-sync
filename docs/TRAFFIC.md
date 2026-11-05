@@ -21,9 +21,18 @@ Nothing calls this tool. [CICD.md](CICD.md) covers how it gets deployed. This pa
 
 A run with nothing to do makes about six Hevy calls and nothing else. hevy2garmin then makes its own Garmin calls for step 8; see its source.
 
+## The poller
+
+| Call | When | Count |
+|---|---|---|
+| Hevy public `GET /v1/workouts/events?since=` | Every `POLL_SECONDS` | 1 per minute, more pages only when more than ten events arrive at once |
+| hevy2garmin `POST /api/cron/webhook` | Per workout saved or edited | Usually one or two a session |
+
+Each webhook call starts up to ten of hevy2garmin's own merge-only attempts over about 28 minutes, each of which asks Garmin for the matching activity. The first that finds it merges and stops.
+
 ## Per day
 
-The CronJob runs 24 times a day. In a week with two workouts and one Monday rename, Garmin sees roughly six device messages and six last-used lookups from this tool, and hevy2garmin makes its own calls to rebuild those workouts.
+The poller makes 1,440 event reads a day. The CronJob runs 24 times a day. In a week with two workouts and one Monday rename, Garmin sees roughly six device messages and six last-used lookups from this tool, and hevy2garmin makes its own calls to rebuild those workouts.
 
 ## Timeouts and retries
 
@@ -31,4 +40,4 @@ HTTP calls time out after 30 seconds (`http.request`), except the dashboard: 300
 
 ## Inbound
 
-None. The pod has no Service and listens on nothing.
+None. Neither pod has a Service or listens on anything. Hevy's webhook would need hevy2garmin reachable from the internet; the poller exists so it does not have to be (record [0019](decisions/0019-poll-hevy-every-minute.md)).
