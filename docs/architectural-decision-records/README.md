@@ -9,7 +9,7 @@ One file for each design decision: what was decided, when, who decided, and the 
 - Take the date and the decider from the conversation or issue that settled it, quoting the decider where the words exist. When nothing records them, use the merge date and the author of the PR that shipped it, and say that git is the source.
 - Give every observation the date it was made.
 - `Cited in code as` lists the issue and PR numbers that source comments cite for the decision, so a search for `#20` finds the record and the code together.
-- Link the record from its `CLAUDE.md` rule as ` Record: [NNNN](docs/decisions/NNNN-slug.md)`, right after the sentence that states the decision.
+- Link the record from its `CLAUDE.md` rule as ` Record: [NNNN](docs/architectural-decision-records/NNNN-slug.md)`, right after the sentence that states the decision.
 - A decision ships in the same PR as its record. A PR that makes a decision without one is not done.
 
 ## Supersede a record
@@ -47,3 +47,4 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0025](0025-dependabot-with-patch-auto-merge.md) | Dependabot watches pip, Docker and Actions, and patch updates merge themselves | 2026-11-05 | Accepted. Narrows 0005 |
 | [0026](0026-security-scanning.md) | GitHub's security scanning is on, and the released image is re-scanned weekly | 2026-11-05 | Accepted |
 | [0027](0027-shared-create-issue-skill.md) | The create-issue skill is shared from zimmertr/ai-config, and this repo's specifics live in CLAUDE.md | 2026-11-05 | Accepted |
+| [0028](0028-records-in-architectural-decision-records.md) | Decision records live in `docs/architectural-decision-records/`, the name every new project uses | 2026-11-05 | Accepted |

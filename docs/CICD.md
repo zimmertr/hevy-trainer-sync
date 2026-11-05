@@ -18,7 +18,7 @@ How a change travels from a pull request to the CronJob in the cluster.
 
 ## Conventions
 
-- **PR title → version.** The repo merges by squash only, and the squash commit's title is the PR title. GitVersion reads that line alone. Record: [0021](decisions/0021-semver-release-per-merge.md).
+- **PR title → version.** The repo merges by squash only, and the squash commit's title is the PR title. GitVersion reads that line alone. Record: [0021](architectural-decision-records/0021-semver-release-per-merge.md).
 
   | PR title | Bump |
   |---|---|
@@ -49,17 +49,17 @@ flowchart TD
 
 Every PR runs two workflows:
 
-- **test** (`test.yml`): Python 3.13, `pip install -r requirements-dev.txt`, the unittest suite under `coverage`, and `coverage report`, which fails below 100% of lines and branches across the package and `.github/scripts`. Record: [0018](decisions/0018-full-coverage.md).
+- **test** (`test.yml`): Python 3.13, `pip install -r requirements-dev.txt`, the unittest suite under `coverage`, and `coverage report`, which fails below 100% of lines and branches across the package and `.github/scripts`. Record: [0018](architectural-decision-records/0018-full-coverage.md).
 - **PR Title** (`pr-title.yml`): runs `.github/scripts/check_pr_title.py`, which reads the three patterns from `GitVersion.yml` and fails a title none of them reads. It says on the PR which bump the merge will release, and warns on a major. It reruns when the title is edited.
 
 A push to main runs `release.yml`, one run at a time (`concurrency: release`). It also runs by hand from the Actions tab, from main only.
 
 1. **test** calls `test.yml` again, on the squash commit.
 2. **Determine Version** runs GitVersion 6.8.2 over the full history and asks Docker Hub and GitHub whether the image, the tag and the release for that version all exist. If they do, everything below is skipped.
-3. **Build & Push** builds `linux/amd64` and pushes `zimmertr/hevy-trainer-sync:<version>` with an SBOM and provenance, labelled with the version and the commit. Then it tags the commit `v<version>`. If the image is already there from this commit, it skips the build; from another commit, it fails. Records: [0005](decisions/0005-images-from-ci-prs-only.md), [0023](decisions/0023-pinned-actions-and-attestations.md).
-4. **Scan Pushed Image** runs Trivy against the pushed digest with `trivy.yaml`, and fails on any fixable Critical or High. The next two jobs need it. Record: [0022](decisions/0022-scan-before-production.md).
+3. **Build & Push** builds `linux/amd64` and pushes `zimmertr/hevy-trainer-sync:<version>` with an SBOM and provenance, labelled with the version and the commit. Then it tags the commit `v<version>`. If the image is already there from this commit, it skips the build; from another commit, it fails. Records: [0005](architectural-decision-records/0005-images-from-ci-prs-only.md), [0023](architectural-decision-records/0023-pinned-actions-and-attestations.md).
+4. **Scan Pushed Image** runs Trivy against the pushed digest with `trivy.yaml`, and fails on any fixable Critical or High. The next two jobs need it. Record: [0022](architectural-decision-records/0022-scan-before-production.md).
 5. **Create GitHub Release** makes the release for the tag, with notes from the merged PR titles. A release finished behind a newer one does not take "Latest".
-6. **Update Kubernetes Manifests** clones Kubernetes-Manifests with the `GH_PAT` secret, resets `chore/hevy-trainer-sync-image` to that repo's main, and runs `.github/scripts/bump_manifest_tag.py`, which changes the one `newTag:` line under `name: zimmertr/hevy-trainer-sync`. Then it force-pushes, opens or retitles the single PR, and arms auto-merge. If the tag is already current it stops, and if a newer release is already out it leaves the manifests alone. Records: [0011](decisions/0011-ci-bumps-manifests.md), [0012](decisions/0012-tag-edited-in-place.md).
+6. **Update Kubernetes Manifests** clones Kubernetes-Manifests with the `GH_PAT` secret, resets `chore/hevy-trainer-sync-image` to that repo's main, and runs `.github/scripts/bump_manifest_tag.py`, which changes the one `newTag:` line under `name: zimmertr/hevy-trainer-sync`. Then it force-pushes, opens or retitles the single PR, and arms auto-merge. If the tag is already current it stops, and if a newer release is already out it leaves the manifests alone. Records: [0011](architectural-decision-records/0011-ci-bumps-manifests.md), [0012](architectural-decision-records/0012-tag-edited-in-place.md).
 7. **Argo CD** applies the merged manifests. To skip the wait, refresh it:
 
    ```sh
@@ -76,17 +76,17 @@ Every action is pinned to a commit SHA, and the base image to tag@digest. GitVer
 
 ## Branch protection
 
-Main takes changes only through a PR, for admins too. Before the merge button works, `test` and `PR Title` must pass and every conversation must be resolved. The branch need not be up to date with main. No approval is required, and no one can force-push or delete main. A ruleset asks Copilot to review every PR, drafts included, as on Bluebird. On 2026-11-05 it had produced no reviews here or on Bluebird; if it starts, resolve its comments like anyone's. The release only pushes tags, which this does not cover. Record: [0024](decisions/0024-branch-protection.md).
+Main takes changes only through a PR, for admins too. Before the merge button works, `test` and `PR Title` must pass and every conversation must be resolved. The branch need not be up to date with main. No approval is required, and no one can force-push or delete main. A ruleset asks Copilot to review every PR, drafts included, as on Bluebird. On 2026-11-05 it had produced no reviews here or on Bluebird; if it starts, resolve its comments like anyone's. The release only pushes tags, which this does not cover. Record: [0024](architectural-decision-records/0024-branch-protection.md).
 
 ## Dependabot
 
 Every Monday Dependabot checks `requirements.txt` and `requirements-dev.txt` (holding back any release younger than seven days), the pinned actions, and the base image digest. It titles each PR `build(deps):` or `build(deps-dev):`, so each one releases a patch. Security updates arrive whenever GitHub publishes an advisory, without the cooldown.
 
-`dependabot-auto-merge.yml` arms squash auto-merge on a **patch-level** version update and comments on the PR to say so. GitHub merges it once the two checks pass and its conversations are resolved, and the merge releases and deploys like any other. A minor, a major, or a digest-only base image update waits for TJ. To stop one, run `gh pr merge --disable-auto` on it, or close it. Record: [0025](decisions/0025-dependabot-with-patch-auto-merge.md).
+`dependabot-auto-merge.yml` arms squash auto-merge on a **patch-level** version update and comments on the PR to say so. GitHub merges it once the two checks pass and its conversations are resolved, and the merge releases and deploys like any other. A minor, a major, or a digest-only base image update waits for TJ. To stop one, run `gh pr merge --disable-auto` on it, or close it. Record: [0025](architectural-decision-records/0025-dependabot-with-patch-auto-merge.md).
 
 ## The weekly image scan
 
-`image-scan.yml` scans the latest release's image every Monday at 14:17 UTC, and by hand from the Actions tab. It sends the findings to the Security tab under `trivy-released-image`, and the run fails (and GitHub emails) only on a fixable Critical or High. To fix it, merge the waiting Dependabot base-image PR if there is one. If there isn't, any merge will do: the release rebuilds with `apt-get upgrade` and no cache. CodeQL, run by GitHub's default setup, covers the code and the workflows and reports to the same tab. Record: [0026](decisions/0026-security-scanning.md).
+`image-scan.yml` scans the latest release's image every Monday at 14:17 UTC, and by hand from the Actions tab. It sends the findings to the Security tab under `trivy-released-image`, and the run fails (and GitHub emails) only on a fixable Critical or High. To fix it, merge the waiting Dependabot base-image PR if there is one. If there isn't, any merge will do: the release rebuilds with `apt-get upgrade` and no cache. CodeQL, run by GitHub's default setup, covers the code and the workflows and reports to the same tab. Record: [0026](architectural-decision-records/0026-security-scanning.md).
 
 On 2026-11-05, before releases, the path from merge to a merged Kubernetes-Manifests PR took about three minutes.
 

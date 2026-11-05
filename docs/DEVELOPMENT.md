@@ -5,7 +5,7 @@ CI is the test runner. Push a branch, open a draft PR, and read the `test` job. 
 ## The loop
 
 1. Branch from the latest `main`.
-2. Write the change and its tests together. Every change ships with tests, and coverage stays at 100% of lines and branches. Record: [0018](decisions/0018-full-coverage.md).
+2. Write the change and its tests together. Every change ships with tests, and coverage stays at 100% of lines and branches. Record: [0018](architectural-decision-records/0018-full-coverage.md).
 3. Commit early, push, and open a draft PR. The `test` job runs on every push to it. Title the PR `type(scope): summary`, because the title picks the release version and the `PR Title` check fails anything else ([CICD.md](CICD.md#conventions)).
 4. Read the result:
 
@@ -15,7 +15,7 @@ CI is the test runner. Push a branch, open a draft PR, and read the `test` job. 
    ```
 
    The coverage table is at the end of the `test` job's log, with the missing lines and branches for any file under 100%.
-5. Update the docs the change makes untrue, and add a decision record for any decision, in the same PR ([decisions/README.md](decisions/README.md)).
+5. Update the docs the change makes untrue, and add a decision record for any decision, in the same PR ([architectural-decision-records/README.md](architectural-decision-records/README.md)).
 6. Mark the PR ready. Resolve every conversation on it, because main will not merge with one open. After TJ approves, it is squash-merged, which releases it, and [CICD.md](CICD.md) takes over.
 
 ## Running the tests in Docker
@@ -47,7 +47,7 @@ docker run --rm -v "$PWD":/repo -w /repo python:3.13-slim sh -c '
 
 ## Building the image
 
-CI builds and pushes every image (record [0005](decisions/0005-images-from-ci-prs-only.md)). To check that the Dockerfile builds without pushing anything:
+CI builds and pushes every image (record [0005](architectural-decision-records/0005-images-from-ci-prs-only.md)). To check that the Dockerfile builds without pushing anything:
 
 ```sh
 docker build -t hevy-trainer-sync:dev .
@@ -55,7 +55,7 @@ docker build -t hevy-trainer-sync:dev .
 
 ## Running the tool
 
-Exercise it through tests, and run it for real from the cluster ([USAGE.md](USAGE.md#running-it-by-hand)). Every run, `--dry-run` included, refreshes the Hevy session and rotates its refresh token, so never point a local run at the cluster's session file (record [0006](decisions/0006-session-on-a-volume.md)). If a local run against the real account is ever needed, do it in the image with a fresh cookie of its own and a throwaway state file:
+Exercise it through tests, and run it for real from the cluster ([USAGE.md](USAGE.md#running-it-by-hand)). Every run, `--dry-run` included, refreshes the Hevy session and rotates its refresh token, so never point a local run at the cluster's session file (record [0006](architectural-decision-records/0006-session-on-a-volume.md)). If a local run against the real account is ever needed, do it in the image with a fresh cookie of its own and a throwaway state file:
 
 ```sh
 docker run --rm -e HEVY_API_KEY -e HEVY_SESSION -e HEVY_STATE_FILE=/tmp/session.json hevy-trainer-sync:dev --dry-run

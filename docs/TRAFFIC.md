@@ -40,4 +40,4 @@ HTTP calls time out after 30 seconds (`http.request`), except the dashboard: 300
 
 ## Inbound
 
-None. Neither pod has a Service or listens on anything. Hevy's webhook would need hevy2garmin reachable from the internet; the poller exists so it does not have to be (record [0019](decisions/0019-poll-hevy-every-minute.md)).
+None. Neither pod has a Service or listens on anything. Hevy's webhook would need hevy2garmin reachable from the internet; the poller exists so it does not have to be (record [0019](architectural-decision-records/0019-poll-hevy-every-minute.md)).

@@ -33,7 +33,7 @@ flowchart LR
     end
 ```
 
-Garmin forwards the watch's activity to Strava before the merge can run, and Strava never takes anything after that first post. The merge fixes Garmin Connect only. What Strava shows is what the watch recorded, which is why the planned workout this tool builds has to be right. Record: [0020](decisions/0020-the-watch-recording-is-what-strava-keeps.md). The poller gets the merge into Garmin Connect a few minutes after the watch syncs instead of two hours later.
+Garmin forwards the watch's activity to Strava before the merge can run, and Strava never takes anything after that first post. The merge fixes Garmin Connect only. What Strava shows is what the watch recorded, which is why the planned workout this tool builds has to be right. Record: [0020](architectural-decision-records/0020-the-watch-recording-is-what-strava-keeps.md). The poller gets the merge into Garmin Connect a few minutes after the watch syncs instead of two hours later.
 
 ## The poller
 
@@ -44,20 +44,20 @@ Garmin forwards the watch's activity to Strava before the merge can run, and Str
 3. For each one, `h2g.trigger_merge()` posts to hevy2garmin's `POST /api/cron/webhook` with `CRON_SECRET`. hevy2garmin answers at once and runs its staged sync in the background: merge-only attempts while the watch's activity reaches Garmin, then a fresh upload on the last attempt.
 4. The mark moves to the last workout that was handed over. If Hevy or hevy2garmin fails, with an HTTP error or no answer at all (DNS, timeout, refused connection), the mark stays put and the next poll tries again.
 
-It needs only the public API key and the cron secret. It never reads or refreshes the Hevy session, so it cannot break the mirror's token chain. Record: [0019](decisions/0019-poll-hevy-every-minute.md).
+It needs only the public API key and the cron secret. It never reads or refreshes the Hevy session, so it cannot break the mirror's token chain. Record: [0019](architectural-decision-records/0019-poll-hevy-every-minute.md).
 
 ## One run
 
 `cli.main()` does these in order. Each step logs one line, and any failure exits non-zero.
 
-1. **Session.** `state.load_or_bootstrap()` reads `HEVY_STATE_FILE`, or on the first run parses `HEVY_SESSION` and saves it at once. `hevy_private.Session` refreshes the access token when Hevy answers 401 and rewrites the file through its `persist` callback. Record: [0006](decisions/0006-session-on-a-volume.md).
+1. **Session.** `state.load_or_bootstrap()` reads `HEVY_STATE_FILE`, or on the first run parses `HEVY_SESSION` and saves it at once. `hevy_private.Session` refreshes the access token when Hevy answers 401 and rewrites the file through its `persist` callback. Record: [0006](architectural-decision-records/0006-session-on-a-volume.md).
 2. **Program.** `Session.get_program()` calls `GET /hevy_trainer/v3/program`. Templates are sorted by `index`, and `next_workout_index` names the next one.
 3. **Weights.** `hevy_public.Client.recent_workouts()` reads the last `WORKOUT_PAGES` pages of workouts, and `build.last_weights()` keeps the last working-set weight per exercise.
 4. **Folder.** The folder titled `FOLDER_TITLE` is found or created.
-5. **Routines.** For each template, `build.routine_from_template()` builds the payload, named by `build.title()` for the week from `build.program_week()`. An existing routine is matched by base title with `build.is_titled_from()`, compared with `build.normalize()`, and created, updated or left alone. Record: [0010](decisions/0010-program-week-in-names.md).
+5. **Routines.** For each template, `build.routine_from_template()` builds the payload, named by `build.title()` for the week from `build.program_week()`. An existing routine is matched by base title with `build.is_titled_from()`, compared with `build.normalize()`, and created, updated or left alone. Record: [0010](architectural-decision-records/0010-program-week-in-names.md).
 6. **Dashboard.** `h2g.Dashboard` logs in with `H2G_PASSWORD` and posts the changed routine ids (all of them with `--force`) to `POST /api/routines/sync`.
-7. **Send to Device.** With `DATABASE_URL` set, `db.garmin_workouts()` and `db.garmin_di_token()` read hevy2garmin's tables, and `garmin.Garmin.send_workout()` queues each new workout for the watch. Record: [0009](decisions/0009-send-to-device-from-here.md).
-8. **Calendar.** Only with `SCHEDULE_NEXT=1`, which the deployment does not set. `schedule.plan()` decides what to unschedule and whether to schedule today. Record: [0008](decisions/0008-no-calendar-scheduling.md).
+7. **Send to Device.** With `DATABASE_URL` set, `db.garmin_workouts()` and `db.garmin_di_token()` read hevy2garmin's tables, and `garmin.Garmin.send_workout()` queues each new workout for the watch. Record: [0009](architectural-decision-records/0009-send-to-device-from-here.md).
+8. **Calendar.** Only with `SCHEDULE_NEXT=1`, which the deployment does not set. `schedule.plan()` decides what to unschedule and whether to schedule today. Record: [0008](architectural-decision-records/0008-no-calendar-scheduling.md).
 
 `--dry-run` stops after step 5 without writing anything. The session is still refreshed, because reading the program needs a valid token.
 
@@ -85,7 +85,7 @@ It runs in TJ's cluster next to hevy2garmin, in namespace `hevy2garmin-system`, 
 
 | Object | What |
 |---|---|
-| CronJob `hevy-trainer-sync` | `7 * * * *`, `concurrencyPolicy: Forbid`, `backoffLimit: 0`, 600 s deadline, UID 1000, read-only root filesystem. Record: [0007](decisions/0007-hourly-cronjob.md) |
+| CronJob `hevy-trainer-sync` | `7 * * * *`, `concurrencyPolicy: Forbid`, `backoffLimit: 0`, 600 s deadline, UID 1000, read-only root filesystem. Record: [0007](architectural-decision-records/0007-hourly-cronjob.md) |
 | Deployment `hevy-trainer-poll` | One replica, `Recreate`, args `poll`, same image, no volume, UID 1000, read-only root filesystem |
 | PVC `hevy-trainer-sync-state` | 1 Gi on `proxmox-flashpool`, mounted at `/state`. Holds `hevy-session.json` and nothing else |
 | Secret `hevy2garmin` | Keys `hevy-api-key`, `password`, `cron-secret` (the poller), and `hevy-session` (only needed until the first run) |
@@ -97,5 +97,5 @@ The job talks to the dashboard through its Service, `http://hevy2garmin`, and to
 
 - **One refresher.** The session file is the only valid copy of a rotating token. Two processes refreshing it would break the chain, so the CronJob forbids overlap and nothing else may run against the same session.
 - **hevy2garmin owns Garmin.** This tool never logs in to Garmin and never refreshes Garmin's token. It borrows the token hevy2garmin stores, and asks the dashboard to refresh it on a 401.
-- **The routines are a copy.** hevy2garmin keys Garmin workouts on the Hevy routine id, so the routines stay in Hevy. Record: [0014](decisions/0014-routines-stay-in-hevy.md).
+- **The routines are a copy.** hevy2garmin keys Garmin workouts on the Hevy routine id, so the routines stay in Hevy. Record: [0014](architectural-decision-records/0014-routines-stay-in-hevy.md).
 - **Undocumented endpoints.** Hevy's Trainer endpoint and Garmin's device-message endpoint are both undocumented. See [DATA.md](DATA.md) for what each one returns and the quirks found so far.
