@@ -9,7 +9,9 @@ This job closes the gap. Every run it:
 1. Reads the Trainer program from Hevy's private API (the endpoint the app itself uses, catalogued in [hevy-mcp-unofficial](https://github.com/LovelessCodes/hevy-mcp-unofficial)).
 2. Writes one Hevy routine per program template into a folder called `Hevy Trainer`, through the public API, named for the program week: `Upper W8` is the eighth week since the program started, which is what the app's cycle and week multiply out to. The name on the watch is the quickest way to see a run didn't land. Sets, rep ranges, warm-ups and rest times come from Trainer; working weights come from your last logged session of each exercise.
 3. Tells your hevy2garmin dashboard to push the routines that changed to Garmin.
-4. Puts Trainer's next workout on today's date in the Garmin calendar. That is what gets it onto the watch: Garmin pushes scheduled workouts to the device by itself, while a workout that only sits in the library needs Send to Device by hand, and hevy2garmin recreates the Garmin workout whenever a routine changes, which drops that. A past entry that was never done is moved to today; one that was done stays, linked to its activity.
+4. Sends each new Garmin workout to the watch, the way Garmin Connect's Send to Device button does. hevy2garmin recreates the Garmin workout whenever a routine changes, and the new copy isn't on the watch until something sends it. The watch downloads it at its next phone sync. This uses the Garmin session hevy2garmin holds, read from its Postgres, so Garmin never sees a second login.
+
+Optionally (`SCHEDULE_NEXT=1`) it also puts Trainer's next workout on today's date in the Garmin calendar. Off by default: it means a planned-workout entry on every day until you train.
 
 Start the workout from the watch's Training menu and every set is named before Garmin ever forwards it.
 
@@ -34,7 +36,10 @@ Everything is environment variables.
 | `H2G_PASSWORD` | | Its login password |
 | `FOLDER_TITLE` | `Hevy Trainer` | Routine folder to manage |
 | `WORKOUT_PAGES` | `4` | How many pages of ten workouts to scan for last weights |
-| `DATABASE_URL` | | hevy2garmin's Postgres, read-only, for the calendar entry ids its API doesn't return. Unset disables the calendar step. |
+| `DATABASE_URL` | | hevy2garmin's Postgres, read-only: the Garmin workout ids and session for Send to Device, and calendar entry ids. Unset disables both steps. |
+| `SEND_TO_DEVICE` | `1` | Send each new Garmin workout to the watch |
+| `GARMIN_DEVICE_ID` | last used | Which Garmin device to send to |
+| `SCHEDULE_NEXT` | `0` | Also put the next workout on today's Garmin calendar |
 | `TZ` | `UTC` | Which day "today" is for the calendar |
 
 Flags: `--dry-run` reads everything and writes nothing to Hevy or hevy2garmin (the session token is still refreshed). `--force` pushes every managed routine to Garmin even if nothing changed.
