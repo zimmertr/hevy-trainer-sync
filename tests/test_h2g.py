@@ -63,3 +63,17 @@ class RoutesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@mock.patch.object(h2g, "request")
+class TriggerMergeTest(unittest.TestCase):
+    def test_posts_the_webhook_route_with_the_cron_secret(self, request):
+        request.return_value = ({"ok": True, "mode": "staged", "status": "accepted"}, {})
+        self.assertEqual(h2g.trigger_merge("http://h2g/", "s3cret")["status"], "accepted")
+        request.assert_called_once_with("POST", "http://h2g/api/cron/webhook",
+                                        headers={"Authorization": "Bearer s3cret"}, body={})
+
+    def test_non_object_answer_is_empty(self, request):
+        for answer in (None, [], "ok"):
+            request.return_value = (answer, {})
+            self.assertEqual(h2g.trigger_merge("http://h2g", "s"), {})

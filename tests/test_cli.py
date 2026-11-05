@@ -463,3 +463,18 @@ class EntryPointTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PollDispatchTest(unittest.TestCase):
+    def test_poll_runs_the_watcher_with_the_remaining_args(self):
+        from hevy_trainer_sync import poll
+        with mock.patch.object(poll, "main", return_value=0) as watcher:
+            self.assertEqual(cli.main(["poll", "--x"]), 0)
+        watcher.assert_called_once_with(["--x"])
+
+    def test_no_argv_reads_sys_argv(self):
+        from hevy_trainer_sync import poll
+        with mock.patch.object(cli.sys, "argv", ["hevy-trainer-sync", "poll"]), \
+                mock.patch.object(poll, "main", return_value=3) as watcher:
+            self.assertEqual(cli.main(), 3)
+        watcher.assert_called_once_with([])

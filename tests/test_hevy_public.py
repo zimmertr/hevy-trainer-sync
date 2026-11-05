@@ -33,6 +33,19 @@ class PagesTest(unittest.TestCase):
         self.assertEqual([c.kwargs["query"]["page"] for c in request.call_args_list], [1, 2])
         self.assertEqual(request.call_args.args, ("GET", f"{BASE}/workouts"))
 
+    def test_workout_events_since_every_page(self, request):
+        request.side_effect = [
+            ({"page_count": 2, "events": [{"type": "updated"}]}, {}),
+            ({"page_count": 2, "events": [{"type": "deleted"}]}, {}),
+        ]
+        events = hevy_public.Client("key").workout_events("2026-11-05T18:00:00Z")
+        self.assertEqual(events, [{"type": "updated"}, {"type": "deleted"}])
+        self.assertEqual(request.call_args.args, ("GET", f"{BASE}/workouts/events"))
+        self.assertEqual([c.kwargs["query"] for c in request.call_args_list], [
+            {"since": "2026-11-05T18:00:00Z", "page": 1, "pageSize": 10},
+            {"since": "2026-11-05T18:00:00Z", "page": 2, "pageSize": 10},
+        ])
+
 
 @mock.patch.object(hevy_public, "request")
 class WriteTest(unittest.TestCase):
