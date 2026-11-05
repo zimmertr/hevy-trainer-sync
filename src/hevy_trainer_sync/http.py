@@ -14,7 +14,7 @@ class HttpError(Exception):
 
 
 def request(method: str, url: str, *, headers: dict | None = None, query: dict | None = None,
-            body: dict | None = None, timeout: int = 30) -> tuple[dict | list | None, dict]:
+            body: dict | list | None = None, timeout: int = 30) -> tuple[dict | list | None, dict]:
     """Return (decoded JSON or None, response headers). Raises HttpError on 4xx/5xx."""
     if query:
         url = f"{url}?{urllib.parse.urlencode(query)}"

@@ -25,14 +25,20 @@ HEADERS = {
 
 
 def message(workout_id: str, name: str, device_id: int | str) -> dict:
-    """The device message Garmin Connect posts for Send to Device."""
+    """One device message, the shape Garmin Connect posts for Send to Device.
+
+    The endpoint takes a list of these. A bare object gets a 500
+    MismatchedInputException back (seen 2026-11-05), so send_workout wraps it.
+    """
     return {
         "deviceId": int(device_id),
         "messageUrl": f"workout-service/workout/FIT/{workout_id}",
         "messageType": "workouts",
+        "groupName": None,
         "messageName": name,
         "priority": 1,
         "fileType": "FIT",
+        "metaDataId": int(workout_id),
     }
 
 
@@ -49,4 +55,4 @@ class Garmin:
 
     def send_workout(self, workout_id: str, name: str, device_id: int | str) -> None:
         request("POST", f"{BASE}/device-service/devicemessage/messages", headers=self._h,
-                body=message(workout_id, name, device_id))
+                body=[message(workout_id, name, device_id)])
