@@ -13,7 +13,7 @@ The decisions behind this tool were spread across a chat, PR bodies and issue co
 
 ## Decision
 
-Prose lives in `docs/`: architecture, CI/CD, configuration, usage, data sources, traffic and development. Every decision gets a record in `docs/decisions/`, linked from the `CLAUDE.md` rule it explains. A change that makes a doc untrue updates it in the same PR. Bluebird's `API.md`, `LIMITS.md` and `STYLES.md` have no counterpart: this tool serves no API, enforces no caps and has no UI.
+Prose lives in `docs/`: architecture, CI/CD, configuration, usage, data sources, traffic and development. Every decision gets a record in `docs/architectural-decision-records/`, linked from the `CLAUDE.md` rule it explains. A change that makes a doc untrue updates it in the same PR. Bluebird's `API.md`, `LIMITS.md` and `STYLES.md` have no counterpart: this tool serves no API, enforces no caps and has no UI.
 
 ## Evidence
 

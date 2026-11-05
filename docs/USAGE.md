@@ -4,13 +4,13 @@ Once it is deployed there is nothing to run. This page is what you see, what you
 
 ## A normal week
 
-- **In Hevy**, the folder `Hevy Trainer` holds one routine per Trainer template, named for the program week: `Upper W8`, `Lower W8`. Don't edit them; the next run overwrites them. Don't delete them either: hevy2garmin needs them to keep the watch's copy. Record: [0014](decisions/0014-routines-stay-in-hevy.md).
-- **On the watch**, the same names appear under Workouts after the phone next syncs. Nothing is on the calendar. Record: [0008](decisions/0008-no-calendar-scheduling.md).
+- **In Hevy**, the folder `Hevy Trainer` holds one routine per Trainer template, named for the program week: `Upper W8`, `Lower W8`. Don't edit them; the next run overwrites them. Don't delete them either: hevy2garmin needs them to keep the watch's copy. Record: [0014](architectural-decision-records/0014-routines-stay-in-hevy.md).
+- **On the watch**, the same names appear under Workouts after the phone next syncs. Nothing is on the calendar. Record: [0008](architectural-decision-records/0008-no-calendar-scheduling.md).
 - **To train**, start Trainer's workout in Hevy on the phone, and on the watch start the matching workout from the Workouts list. The watch walks you through the planned exercises and sets. Log the real reps and weights in Hevy as usual.
-- **During the session**, what the watch records is what Strava keeps, forever. Follow the planned sets, and if you change a weight or do different reps, enter it on the watch as well as in Hevy. Record: [0020](decisions/0020-the-watch-recording-is-what-strava-keeps.md).
-- **After you finish**, the watch's activity reaches Garmin and Strava at its next phone sync. Within a minute of Finish in Hevy, the poller asks hevy2garmin to merge, and Garmin Connect has Hevy's sets a few minutes after the watch has synced. Strava does not change. Let the watch sync within about 25 minutes of finishing; after that hevy2garmin gives up waiting and uploads a second activity. Records: [0001](decisions/0001-merge-into-the-watch-activity.md), [0019](decisions/0019-poll-hevy-every-minute.md).
+- **During the session**, what the watch records is what Strava keeps, forever. Follow the planned sets, and if you change a weight or do different reps, enter it on the watch as well as in Hevy. Record: [0020](architectural-decision-records/0020-the-watch-recording-is-what-strava-keeps.md).
+- **After you finish**, the watch's activity reaches Garmin and Strava at its next phone sync. Within a minute of Finish in Hevy, the poller asks hevy2garmin to merge, and Garmin Connect has Hevy's sets a few minutes after the watch has synced. Strava does not change. Let the watch sync within about 25 minutes of finishing; after that hevy2garmin gives up waiting and uploads a second activity. Records: [0001](architectural-decision-records/0001-merge-into-the-watch-activity.md), [0019](architectural-decision-records/0019-poll-hevy-every-minute.md).
 - **Within the hour**, the routine you just trained is updated with the weights you lifted, and the watch gets the new copy at its next sync.
-- **On Monday**, the routines are renamed for the new week, `W9` and so on, and reach the watch the same way. Record: [0010](decisions/0010-program-week-in-names.md).
+- **On Monday**, the routines are renamed for the new week, `W9` and so on, and reach the watch the same way. Record: [0010](architectural-decision-records/0010-program-week-in-names.md).
 
 ## Is it working?
 

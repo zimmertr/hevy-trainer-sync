@@ -16,7 +16,7 @@ Everything is environment variables and two flags. There is no config file. The 
 | `DATABASE_URL` | | | `db` | hevy2garmin's Postgres, read-only. Unset turns off Send to Device and the calendar |
 | `SEND_TO_DEVICE` | `1` | | `cli.py` | `1` sends each new Garmin workout to the watch; anything else skips it |
 | `GARMIN_DEVICE_ID` | last-used device | | `cli.send_to_device` | The Garmin device to send to |
-| `SCHEDULE_NEXT` | `0` | | `cli.py` | `1` also puts the next workout on today's Garmin calendar. Record: [0008](decisions/0008-no-calendar-scheduling.md) |
+| `SCHEDULE_NEXT` | `0` | | `cli.py` | `1` also puts the next workout on today's Garmin calendar. Record: [0008](architectural-decision-records/0008-no-calendar-scheduling.md) |
 | `TZ` | `UTC` | | `schedule.today_in` | Which day "today" is for the calendar |
 | `CRON_SECRET` | | `poll` only | `poll.main` | hevy2garmin's cron secret, sent as a bearer to its webhook route |
 | `POLL_SECONDS` | `60` | | `poll.main` | How often `poll` reads Hevy's workout events |
@@ -55,7 +55,7 @@ Everything else takes its default.
 | `H2G_URL` | `http://hevy2garmin` |
 | `CRON_SECRET` | Secret `hevy2garmin`, key `cron-secret` |
 
-hevy2garmin's own Deployment sets `WEBHOOK_DELAY_SECONDS=60`, `WEBHOOK_RETRY_INTERVAL_SECONDS=180` and `WEBHOOK_MAX_ATTEMPTS=10`, which shape what happens after the poller calls it. Record: [0019](decisions/0019-poll-hevy-every-minute.md).
+hevy2garmin's own Deployment sets `WEBHOOK_DELAY_SECONDS=60`, `WEBHOOK_RETRY_INTERVAL_SECONDS=180` and `WEBHOOK_MAX_ATTEMPTS=10`, which shape what happens after the poller calls it. Record: [0019](architectural-decision-records/0019-poll-hevy-every-minute.md).
 
 To run the mirror once with a flag, create a Job from the CronJob and add the argument:
 

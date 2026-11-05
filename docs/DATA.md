@@ -16,14 +16,14 @@ What each source can and cannot tell this tool, and every quirk found so far. Ea
 
 - **What it has** (2026-11-04): `id`, `created_at`, `current_week`, `next_workout_index`, `program_variety`, `exercises_rotated_at`, `edits`, and `templates[]`. Each template has a `key` such as `upper_2x_a` and `exercises[]` with `index`, `exercise_template_id` (the public API's template id), `set_count`, `warmup_set_count`, `rep_range {start, end}` and `rest_seconds`.
 - **What it lacks**: weights, and any display title. The title comes from the key: the words before the frequency token (`upper_2x_a` is "Upper").
-- **`current_week` is not the app's week** (2026-11-04): it read 5 when the app showed cycle 2, week 2 of a 6-week cycle. Calendar weeks since `created_at` gave 8, which matched. Record: [0010](decisions/0010-program-week-in-names.md). Issue #14 tracks whether that holds.
+- **`current_week` is not the app's week** (2026-11-04): it read 5 when the app showed cycle 2, week 2 of a 6-week cycle. Calendar weeks since `created_at` gave 8, which matched. Record: [0010](architectural-decision-records/0010-program-week-in-names.md). Issue #14 tracks whether that holds.
 - **`exercises_rotated_at`** read Thursday 29 Oct, so rotations do not fall on week boundaries.
 
 ## Hevy session (private)
 
 - Tokens come from the hevy.com `auth2.0-token` cookie, a URL-encoded JSON object with `access_token`, `refresh_token` and `expires_at`. The access token lasts about 30 minutes (2026-11-04).
 - `POST /auth/refresh_token` with `{"refresh_token": ...}` needs the old access token in `Authorization` as well, even an expired one. Without it Hevy answers 400 (2026-11-04).
-- The refresh token rotates on every refresh. Whoever refreshes last holds the only valid copy. Record: [0006](decisions/0006-session-on-a-volume.md).
+- The refresh token rotates on every refresh. Whoever refreshes last holds the only valid copy. Record: [0006](architectural-decision-records/0006-session-on-a-volume.md).
 - Nobody knows yet whether refresh tokens have an absolute lifetime (#9).
 
 ## Hevy public API
@@ -44,14 +44,14 @@ What each source can and cannot tell this tool, and every quirk found so far. Ea
 - `POST /api/routines/{id}/schedule {date}` answers `scheduleId: null` for a single date; the id is in `routine_schedules`.
 - Tables read: `synced_routines (hevy_routine_id, garmin_workout_id, title, status, content_hash)`, `routine_schedules (hevy_routine_id, schedule_id, scheduled_date)`, and `platform_credentials` where `platform = 'garmin_tokens'`, whose `credentials -> 'garmin_tokens'` holds `di_token`, `di_client_id` and `di_refresh_token`.
 - Exercise mapping is its own table. Hevy's Pullover (Dumbbell) arrives on Garmin as "EZ-Bar Pull-over" (2026-11-04).
-- Merged sets keep their exercise names in Garmin Connect. Garmin shows any exercise with stored confidence 0 as "Unknown", and the merge sends `probability: 100` since upstream #325 was fixed; the deployed `f0f6755` has it. Seen correct on the 3 Nov Lower (2026-11-05). Record: [0001](decisions/0001-merge-into-the-watch-activity.md).
+- Merged sets keep their exercise names in Garmin Connect. Garmin shows any exercise with stored confidence 0 as "Unknown", and the merge sends `probability: 100` since upstream #325 was fixed; the deployed `f0f6755` has it. Seen correct on the 3 Nov Lower (2026-11-05). Record: [0001](architectural-decision-records/0001-merge-into-the-watch-activity.md).
 
 ## Garmin Connect
 
 - `GET /device-service/deviceservice/mylastused` answers with `userDeviceId`, the id the device message wants.
 - `POST /device-service/devicemessage/messages` takes a **list** of messages. A bare object gets `500 MismatchedInputException` (2026-11-05, fixed in #20). Each message is `{deviceId, messageUrl: "workout-service/workout/FIT/<id>", messageType: "workouts", groupName: null, messageName, priority: 1, fileType: "FIT", metaDataId: <id>}`. The watch downloads it at its next phone sync.
 - connectapi answers differently to a bare bearer, so requests carry the Android app's headers (`garmin.HEADERS`).
-- Garmin forwards a new activity to Strava within seconds of the phone sync, and nothing after that. hevy2garmin's merge of the 3 Nov Lower on 4 Nov changed Garmin Connect and left Strava's copy as the watch sent it (2026-11-05). Record: [0020](decisions/0020-the-watch-recording-is-what-strava-keeps.md).
+- Garmin forwards a new activity to Strava within seconds of the phone sync, and nothing after that. hevy2garmin's merge of the 3 Nov Lower on 4 Nov changed Garmin Connect and left Strava's copy as the watch sent it (2026-11-05). Record: [0020](architectural-decision-records/0020-the-watch-recording-is-what-strava-keeps.md).
 - The watch's FIT files store weight in sixteenths of a kilogram, so 25, 45 and 80 lb entered on the watch read 24.9, 45.1 and 80.1 lb on Strava.
 
 ## Strava
