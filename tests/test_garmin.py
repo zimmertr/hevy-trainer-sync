@@ -9,10 +9,33 @@ class MessageTest(unittest.TestCase):
             "deviceId": 3456789012,
             "messageUrl": "workout-service/workout/FIT/123456",
             "messageType": "workouts",
+            "groupName": None,
             "messageName": "Upper W8",
             "priority": 1,
             "fileType": "FIT",
+            "metaDataId": 123456,
         })
+
+    def test_send_posts_a_list_of_messages(self):
+        # Garmin answers a bare object with 500 MismatchedInputException.
+        sent = {}
+
+        def fake_request(method, url, headers=None, body=None, **_):
+            sent.update(method=method, url=url, body=body)
+            return {}, {}
+
+        g = garmin.Garmin("tok")
+        original = garmin.request
+        garmin.request = fake_request
+        try:
+            g.send_workout("123456", "Upper W8", 3456789012)
+        finally:
+            garmin.request = original
+        self.assertEqual(sent["method"], "POST")
+        self.assertTrue(sent["url"].endswith("/device-service/devicemessage/messages"))
+        self.assertIsInstance(sent["body"], list)
+        self.assertEqual(len(sent["body"]), 1)
+        self.assertEqual(sent["body"][0]["metaDataId"], 123456)
 
     def test_client_sends_bearer_and_native_headers(self):
         g = garmin.Garmin("tok")
