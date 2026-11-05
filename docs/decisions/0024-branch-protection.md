@@ -1,4 +1,4 @@
-# 0024. Main is protected the way Bluebird's is, and Copilot reviews every PR
+# 0024. Main is protected the way Bluebird's is, with Bluebird's Copilot review ruleset
 
 - Status: Accepted
 - Date: 2026-11-05
@@ -25,7 +25,8 @@ A ruleset, "Copilot review for default branch", asks Copilot to review every PR,
 
 ## Evidence
 
-Bluebird's settings, read through the API on 2026-11-05: the same values as above, with its own nine CI jobs as the required checks, and ruleset 19701460 with the same three rules.
+- Bluebird's settings, read through the API on 2026-11-05: the same values as above, with its own nine CI jobs as the required checks, and ruleset 19701460 with the same three rules.
+- 2026-11-05: the ruleset requested no Copilot review on #35, a draft, in the first ten minutes. On Bluebird, none of the six latest non-Dependabot PRs (#841 to #851) has a Copilot review either; the only review among them is `github-advanced-security[bot]` on #845. The rule is in force but has produced no reviews on either repo, likely because Copilot code review is not available on the account. Not confirmed.
 
 ## Alternatives rejected
 
@@ -34,4 +35,4 @@ Bluebird's settings, read through the API on 2026-11-05: the same values as abov
 
 ## Consequences
 
-Nobody can push to main, TJ included; the release workflow only pushes tags, which this does not cover. A Copilot comment blocks the merge until it is resolved, which also holds up a self-merging Dependabot PR. Renaming the `test` job or the `PR Title` job means updating the required checks in the same change.
+Nobody can push to main, TJ included; the release workflow only pushes tags, which this does not cover. If Copilot does start reviewing, its comments block the merge until resolved, self-merging Dependabot PRs included. Renaming the `test` job or the `PR Title` job means updating the required checks in the same change.

@@ -76,7 +76,7 @@ Every action is pinned to a commit SHA, and the base image to tag@digest. GitVer
 
 ## Branch protection
 
-Main takes changes only through a PR, for admins too. Before the merge button works, `test` and `PR Title` must pass and every conversation must be resolved. The branch need not be up to date with main. No approval is required, and no one can force-push or delete main. A ruleset asks Copilot to review every PR, drafts included; resolve or answer its comments like anyone's. The release only pushes tags, which this does not cover. Record: [0024](decisions/0024-branch-protection.md).
+Main takes changes only through a PR, for admins too. Before the merge button works, `test` and `PR Title` must pass and every conversation must be resolved. The branch need not be up to date with main. No approval is required, and no one can force-push or delete main. A ruleset asks Copilot to review every PR, drafts included, as on Bluebird. On 2026-11-05 it had produced no reviews here or on Bluebird; if it starts, resolve its comments like anyone's. The release only pushes tags, which this does not cover. Record: [0024](decisions/0024-branch-protection.md).
 
 ## Dependabot
 

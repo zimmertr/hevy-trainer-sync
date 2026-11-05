@@ -43,6 +43,6 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0021](0021-semver-release-per-merge.md) | Every merge to main cuts a SemVer release, and GitVersion reads the bump from the PR title | 2026-11-05 | Accepted. Supersedes the tag convention of 0005 |
 | [0022](0022-scan-before-production.md) | Production moves only onto a scanned image, and the image takes Debian's fixes at build time | 2026-11-05 | Accepted |
 | [0023](0023-pinned-actions-and-attestations.md) | Every action is pinned to a commit, and the image carries an SBOM and provenance | 2026-11-05 | Accepted. No-auto-merge consequence superseded by 0025 |
-| [0024](0024-branch-protection.md) | Main is protected the way Bluebird's is, and Copilot reviews every PR | 2026-11-05 | Accepted |
+| [0024](0024-branch-protection.md) | Main is protected the way Bluebird's is, with Bluebird's Copilot review ruleset | 2026-11-05 | Accepted |
 | [0025](0025-dependabot-with-patch-auto-merge.md) | Dependabot watches pip, Docker and Actions, and patch updates merge themselves | 2026-11-05 | Accepted. Narrows 0005 |
 | [0026](0026-security-scanning.md) | GitHub's security scanning is on, and the released image is re-scanned weekly | 2026-11-05 | Accepted |

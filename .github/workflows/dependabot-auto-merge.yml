@@ -31,7 +31,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       # Squash, the only merge this repo allows. GitHub completes it once the
-      # required checks pass and every conversation, Copilot's included, is
+      # required checks pass and every conversation on it is
       # resolved.
       - name: Enable auto-merge for patch updates
         if: ${{ steps.metadata.outputs.update-type == 'version-update:semver-patch' }}
