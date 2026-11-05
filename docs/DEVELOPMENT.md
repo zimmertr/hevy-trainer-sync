@@ -18,23 +18,24 @@ CI is the test runner. Push a branch, open a draft PR, and read the `test` job. 
 5. Update the docs the change makes untrue, and add a decision record for any decision, in the same PR ([architectural-decision-records/README.md](architectural-decision-records/README.md)).
 6. Mark the PR ready. Resolve every conversation on it, because main will not merge with one open. After TJ approves, it is squash-merged, which releases it, and [CICD.md](CICD.md) takes over.
 
-## Running the tests in Docker
+## Running the checks in Docker
 
-Only when CI is not enough, for example to iterate on one failing test:
+Only when CI is not enough, for example to iterate on one failing test. Every check CI runs is a `make` target, and each one runs in Docker. Record: [0029](architectural-decision-records/0029-repo-files-and-make-targets.md)
+
+| Target | What it runs |
+|---|---|
+| `make test` | The suite under coverage, failing below 100%, as the `test` job does |
+| `make test-one MODULE=tests.test_build` | One module, verbose |
+| `make build` | `docker build -t hevy-trainer-sync:dev .` |
+| `make scan` | Builds, then scans the build with Trivy under `trivy.yaml`, failing on a fixable Critical or High, as the release does |
+
+The same suite without make:
 
 ```sh
 docker run --rm -v "$PWD":/repo -w /repo python:3.13-slim sh -c '
   pip install -q -r requirements-dev.txt &&
   PYTHONPATH=src python -m coverage run -m unittest discover -s tests &&
   python -m coverage report'
-```
-
-One module:
-
-```sh
-docker run --rm -v "$PWD":/repo -w /repo python:3.13-slim sh -c '
-  pip install -q -r requirements-dev.txt &&
-  PYTHONPATH=src python -m unittest tests.test_build -v'
 ```
 
 ## Writing tests
@@ -47,11 +48,7 @@ docker run --rm -v "$PWD":/repo -w /repo python:3.13-slim sh -c '
 
 ## Building the image
 
-CI builds and pushes every image (record [0005](architectural-decision-records/0005-images-from-ci-prs-only.md)). To check that the Dockerfile builds without pushing anything:
-
-```sh
-docker build -t hevy-trainer-sync:dev .
-```
+CI builds and pushes every image (record [0005](architectural-decision-records/0005-images-from-ci-prs-only.md)). To check that the Dockerfile builds without pushing anything, run `make build`, and `make scan` to put it through the release's scan.
 
 ## Running the tool
 
