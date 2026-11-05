@@ -6,7 +6,7 @@ CI is the test runner. Push a branch, open a draft PR, and read the `test` job. 
 
 1. Branch from the latest `main`.
 2. Write the change and its tests together. Every change ships with tests, and coverage stays at 100% of lines and branches. Record: [0018](decisions/0018-full-coverage.md).
-3. Commit early, push, and open a draft PR. The `test` job runs on every push to it.
+3. Commit early, push, and open a draft PR. The `test` job runs on every push to it. Title the PR `type(scope): summary`, because the title picks the release version and the `PR Title` check fails anything else ([CICD.md](CICD.md#conventions)).
 4. Read the result:
 
    ```sh
@@ -16,7 +16,7 @@ CI is the test runner. Push a branch, open a draft PR, and read the `test` job. 
 
    The coverage table is at the end of the `test` job's log, with the missing lines and branches for any file under 100%.
 5. Update the docs the change makes untrue, and add a decision record for any decision, in the same PR ([decisions/README.md](decisions/README.md)).
-6. Mark the PR ready. After TJ approves, it is squash-merged and [CICD.md](CICD.md) takes over.
+6. Mark the PR ready. After TJ approves, it is squash-merged, which releases it, and [CICD.md](CICD.md) takes over.
 
 ## Running the tests in Docker
 

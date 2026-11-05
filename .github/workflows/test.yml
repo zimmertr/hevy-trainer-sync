@@ -1,0 +1,26 @@
+name: test
+
+# Every PR, and every release before it builds anything: release.yml calls this
+# so the squash commit is tested as merged, not only the branch that became it.
+on:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - run: pip install -r requirements-dev.txt
+      - run: PYTHONPATH=src python -m coverage run -m unittest discover -s tests -v
+      # Fails the job below 100% line and branch coverage (fail_under in .coveragerc).
+      - run: python -m coverage report

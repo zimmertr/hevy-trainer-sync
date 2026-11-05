@@ -1,0 +1,10 @@
+# Scan settings for the release scan in release.yml and for a local
+# `trivy image` from the repo root, so both judge the image the same way.
+scan:
+  skip-files:
+    # pip ships a CycloneDX SBOM of the source it vendors, and Trivy reads any
+    # SBOM it finds as image inventory. It is not inventory: Bluebird found
+    # Trivy reporting the old versions this file names while newer ones were
+    # installed (its trivy.yaml, 2026-10). Skipping the file rather than CVE ids
+    # leaves every installed package scanned.
+    - '**/pip/_vendor/bom.cdx.json'
