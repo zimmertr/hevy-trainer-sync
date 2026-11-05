@@ -1,0 +1,3 @@
+-r requirements.txt
+# Test-only: line and branch coverage, enforced at 100% in CI.
+coverage==7.17.2
