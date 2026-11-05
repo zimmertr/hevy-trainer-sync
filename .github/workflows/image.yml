@@ -47,18 +47,6 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
-      - name: Install kustomize
-        env:
-          KUSTOMIZE_VERSION: 5.4.3
-          KUSTOMIZE_SHA256: 3669470b454d865c8184d6bce78df05e977c9aea31c30df3c669317d43bcc7a7
-        run: |
-          TARBALL="kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
-          curl -fsSL -o "$RUNNER_TEMP/$TARBALL" \
-            "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/${TARBALL}"
-          echo "${KUSTOMIZE_SHA256}  $RUNNER_TEMP/$TARBALL" | sha256sum --check --strict
-          mkdir -p "$RUNNER_TEMP/bin"
-          tar -xzf "$RUNNER_TEMP/$TARBALL" -C "$RUNNER_TEMP/bin" kustomize
-          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
       - name: Open or update the image bump PR
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
@@ -72,7 +60,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -B "$BR" origin/main
-          (cd misc/hevy2garmin && kustomize edit set image "zimmertr/hevy-trainer-sync=zimmertr/hevy-trainer-sync:${SHA}")
+          # Edit the one newTag line in place. `kustomize edit set image` rewrites
+          # the whole file and strands the comments, so it is not used here.
+          python3 - "$SHA" <<'PY'
+          import pathlib, re, sys
+          p = pathlib.Path("misc/hevy2garmin/kustomization.yml")
+          s = p.read_text()
+          s, n = re.subn(
+              r"(name: zimmertr/hevy-trainer-sync\n(?:[ \t]+(?:#.*|newName:.*)\n)*[ \t]+newTag: )[0-9a-f]+",
+              lambda m: m.group(1) + sys.argv[1], s)
+          assert n == 1, f"expected one hevy-trainer-sync newTag line, matched {n}"
+          p.write_text(s)
+          PY
           if git diff --quiet; then
             echo "Manifests already at ${SHA}; nothing to bump."
             exit 0
