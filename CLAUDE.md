@@ -14,7 +14,11 @@ Prose lives in `docs/`. A change that makes any of it untrue updates it in the s
 | [`docs/USAGE.md`](docs/USAGE.md) | What TJ sees in Hevy, on the watch and on Strava, and what to do when it breaks |
 | [`docs/DATA.md`](docs/DATA.md) | What each source returns, and every quirk found, dated |
 | [`docs/TRAFFIC.md`](docs/TRAFFIC.md) | Every outbound call per run, timeouts and retries |
+<<<<<<< HEAD
+| [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | The CI-first loop, the `make` targets, how to write tests |
+=======
 | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | The CI-first loop, Docker commands, how to write tests |
+>>>>>>> origin/main
 | [`docs/architectural-decision-records/`](docs/architectural-decision-records/README.md) | One record per decision. The README is the index and says how to write one. Record: [0028](docs/architectural-decision-records/0028-records-in-architectural-decision-records.md) |
 
 Every decision gets a record in the same PR that makes it, and the rule below that states it links to it.
