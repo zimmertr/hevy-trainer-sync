@@ -46,23 +46,17 @@ Flags: `--dry-run` reads everything and writes nothing to Hevy or hevy2garmin (t
 
 ## Running
 
-```sh
-PYTHONPATH=src python3 -m hevy_trainer_sync --dry-run
-```
+I run it as a Kubernetes CronJob next to hevy2garmin; the manifests are in my [kubernetes-manifests](https://github.com/zimmertr/kubernetes-manifests) repo under `misc/hevy2garmin`. CI builds the image on every merge to main and bumps the tag there.
 
-Tests need nothing but Python 3.11 or newer:
+CI runs the tests, with 100% line and branch coverage required. Anything local runs in Docker:
 
 ```sh
-PYTHONPATH=src python3 -m unittest discover -s tests
+docker run --rm -v "$PWD":/repo -w /repo python:3.13-slim sh -c 'pip install -q -r requirements-dev.txt && PYTHONPATH=src python -m coverage run -m unittest discover -s tests && python -m coverage report'
 ```
 
-Build the image:
+Don't run the tool itself against the session the cluster uses. Every run, `--dry-run` included, rotates the refresh token.
 
-```sh
-docker buildx build --platform linux/amd64 --push -t "zimmertr/hevy-trainer-sync:$(git rev-parse HEAD)" .
-```
-
-I run it as a Kubernetes CronJob next to hevy2garmin; the manifests are in my [kubernetes-manifests](https://github.com/zimmertr/kubernetes-manifests) repo under `misc/hevy2garmin`.
+How it all fits together, how to run it by hand, and why it works the way it does are in [docs/](docs/).
 
 ## What it does not do
 

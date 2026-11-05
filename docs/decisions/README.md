@@ -1,0 +1,40 @@
+# Decision records
+
+One file for each design decision: what was decided, when, who decided, and the evidence that settled it. A record sits beside the [`CLAUDE.md`](../../CLAUDE.md) rule that states the decision today and does not replace it. The guide tells a session what to do. The record keeps why, and since when.
+
+## Write a record
+
+- Copy [`0000-template.md`](0000-template.md) to `NNNN-slug.md` with the next free number. Numbers have four digits and are never reused. The first batch, 0001 to 0018, was backfilled on 2026-11-05 in roughly the order the decisions were made; later records take the next free number whatever their date.
+- The title is the decision, as one sentence.
+- Take the date and the decider from the conversation or issue that settled it, quoting the decider where the words exist. When nothing records them, use the merge date and the author of the PR that shipped it, and say that git is the source.
+- Give every observation the date it was made.
+- `Cited in code as` lists the issue and PR numbers that source comments cite for the decision, so a search for `#20` finds the record and the code together.
+- Link the record from its `CLAUDE.md` rule as ` Record: [NNNN](docs/decisions/NNNN-slug.md)`, right after the sentence that states the decision.
+- A decision ships in the same PR as its record. A PR that makes a decision without one is not done.
+
+## Supersede a record
+
+A new record that reverses an old one says `Supersedes 00NN` in its status line. The old record changes its status line to `Superseded by 00MM` and nothing else. The `CLAUDE.md` link moves to the new record in the same PR.
+
+## Index
+
+| Record | Decision | Date | Status |
+|---|---|---|---|
+| [0001](0001-merge-into-the-watch-activity.md) | hevy2garmin merges Hevy's sets into the watch's own activity | 2026-11-04 | Accepted |
+| [0002](0002-mirror-trainer-into-routines.md) | Trainer's program is mirrored into Hevy routines that hevy2garmin carries to the watch | 2026-11-04 | Accepted |
+| [0003](0003-own-repo-and-image.md) | The tool lives in its own repo and ships its own image | 2026-11-04 | Accepted |
+| [0004](0004-public-gpl-3.md) | The repo is public and licensed GPL-3.0 | 2026-11-04 | Accepted |
+| [0005](0005-images-from-ci-prs-only.md) | Images are built only by CI, and main changes only through PRs | 2026-11-04 | Accepted |
+| [0006](0006-session-on-a-volume.md) | The Hevy session is bootstrapped once from the whole cookie and then lives only on a volume | 2026-11-04 | Accepted |
+| [0007](0007-hourly-cronjob.md) | The mirror runs hourly as a Kubernetes CronJob | 2026-11-04 | Accepted |
+| [0008](0008-no-calendar-scheduling.md) | Workouts are not scheduled on the Garmin calendar | 2026-11-04 | Accepted |
+| [0009](0009-send-to-device-from-here.md) | This job sends each new Garmin workout to the watch, using hevy2garmin's Garmin session | 2026-11-04 | Accepted |
+| [0010](0010-program-week-in-names.md) | Routine names carry the program week, counted from the program's start date | 2026-11-05 | Accepted |
+| [0011](0011-ci-bumps-manifests.md) | CI bumps the image tag in Kubernetes-Manifests with one self-merging PR | 2026-11-05 | Accepted |
+| [0012](0012-tag-edited-in-place.md) | CI edits the newTag line in place instead of running kustomize edit | 2026-11-05 | Accepted |
+| [0013](0013-bluebird-issue-flow.md) | Issues follow Bluebird's create-issue flow and labels | 2026-11-05 | Accepted |
+| [0014](0014-routines-stay-in-hevy.md) | The mirrored routines stay in Hevy after they reach Garmin | 2026-11-05 | Accepted |
+| [0015](0015-nothing-upstream-yet.md) | Nothing goes upstream to hevy2garmin until this tool has been polished and tested | 2026-11-05 | Accepted |
+| [0016](0016-garmin-keeps-posting-to-strava.md) | Garmin's own Strava connection stays on | 2026-11-05 | Accepted |
+| [0017](0017-docs-and-records.md) | Docs and decision records are kept the way Bluebird keeps them | 2026-11-05 | Accepted |
+| [0018](0018-full-coverage.md) | Every change ships with tests, and coverage stays at 100% of lines and branches | 2026-11-05 | Accepted |
