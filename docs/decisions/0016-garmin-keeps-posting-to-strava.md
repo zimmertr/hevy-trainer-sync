@@ -1,6 +1,6 @@
 # 0016. Garmin's own Strava connection stays on
 
-- Status: Accepted
+- Status: Superseded by 0020
 - Date: 2026-11-05
 - Decider: TJ ("No, not yet")
 - Issues and PRs: #26

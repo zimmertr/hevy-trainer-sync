@@ -33,7 +33,7 @@ flowchart LR
     end
 ```
 
-Garmin forwards the watch's activity to Strava before the merge can run, so the first Strava post is the watch's version and the merged sets land on it later. [0016](decisions/0016-garmin-keeps-posting-to-strava.md) keeps it that way for now. The poller makes "later" a few minutes instead of two hours.
+Garmin forwards the watch's activity to Strava before the merge can run, and Strava never takes anything after that first post. The merge fixes Garmin Connect only. What Strava shows is what the watch recorded, which is why the planned workout this tool builds has to be right. Record: [0020](decisions/0020-the-watch-recording-is-what-strava-keeps.md). The poller gets the merge into Garmin Connect a few minutes after the watch syncs instead of two hours later.
 
 ## The poller
 

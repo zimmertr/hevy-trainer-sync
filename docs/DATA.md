@@ -32,7 +32,7 @@ What each source can and cannot tell this tool, and every quirk found so far. Ea
 - **`POST /v1/routines`** accepts `rep_range: null` on a set. **`PUT /v1/routines/{id}`** rejects it with `Expected object, received null`, once per offending set (2026-11-05, fixed in #19). Sets without a range omit the key.
 - **Create and update answers** wrap the routine as `{"routine": [ ... ]}` or `{"routine": { ... }}`; `hevy_public.Client` accepts both.
 - **No routine delete.** Retired templates leave routines behind (#11).
-- **Weights are stored in kilograms.** A pound value logged in the app comes back as a long float (80 lb is `36.28743275485118`), and Garmin and Strava show it rounded, for example 80.1 lb.
+- **Weights are stored in kilograms.** A pound value logged in the app comes back as a long float (80 lb is `36.28743275485118`). Garmin Connect shows a merged weight as 80 lbs.
 - **`GET /v1/workouts/events?since=`** lists `updated` and `deleted` events with the whole workout, newest first (2026-11-05).
 
 ## hevy2garmin
@@ -44,11 +44,17 @@ What each source can and cannot tell this tool, and every quirk found so far. Ea
 - `POST /api/routines/{id}/schedule {date}` answers `scheduleId: null` for a single date; the id is in `routine_schedules`.
 - Tables read: `synced_routines (hevy_routine_id, garmin_workout_id, title, status, content_hash)`, `routine_schedules (hevy_routine_id, schedule_id, scheduled_date)`, and `platform_credentials` where `platform = 'garmin_tokens'`, whose `credentials -> 'garmin_tokens'` holds `di_token`, `di_client_id` and `di_refresh_token`.
 - Exercise mapping is its own table. Hevy's Pullover (Dumbbell) arrives on Garmin as "EZ-Bar Pull-over" (2026-11-04).
-- Merged sets on a device-recorded activity show as "Unknown" exercise names on Garmin and Strava, while reps and weights land (upstream #325; seen on Strava 2026-11-05). Record: [0001](decisions/0001-merge-into-the-watch-activity.md).
+- Merged sets keep their exercise names in Garmin Connect. Garmin shows any exercise with stored confidence 0 as "Unknown", and the merge sends `probability: 100` since upstream #325 was fixed; the deployed `f0f6755` has it. Seen correct on the 3 Nov Lower (2026-11-05). Record: [0001](decisions/0001-merge-into-the-watch-activity.md).
 
 ## Garmin Connect
 
 - `GET /device-service/deviceservice/mylastused` answers with `userDeviceId`, the id the device message wants.
 - `POST /device-service/devicemessage/messages` takes a **list** of messages. A bare object gets `500 MismatchedInputException` (2026-11-05, fixed in #20). Each message is `{deviceId, messageUrl: "workout-service/workout/FIT/<id>", messageType: "workouts", groupName: null, messageName, priority: 1, fileType: "FIT", metaDataId: <id>}`. The watch downloads it at its next phone sync.
 - connectapi answers differently to a bare bearer, so requests carry the Android app's headers (`garmin.HEADERS`).
-- Garmin forwards a new activity to Strava within seconds of the phone sync. Edits made later, including hevy2garmin's merged sets, reached the existing Strava activity in October's data (2026-11-05).
+- Garmin forwards a new activity to Strava within seconds of the phone sync, and nothing after that. hevy2garmin's merge of the 3 Nov Lower on 4 Nov changed Garmin Connect and left Strava's copy as the watch sent it (2026-11-05). Record: [0020](decisions/0020-the-watch-recording-is-what-strava-keeps.md).
+- The watch's FIT files store weight in sixteenths of a kilogram, so 25, 45 and 80 lb entered on the watch read 24.9, 45.1 and 80.1 lb on Strava.
+
+## Strava
+
+- Shows exactly what Garmin first forwarded. Its API cannot edit an activity's sets or delete an activity (no delete since 17 Jan 2017).
+- Exercise names come from the watch's recording: auto-detected per set without a planned workout, so they can change from set to set within one exercise (3 Nov Lower, 2026-11-05).

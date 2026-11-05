@@ -18,7 +18,8 @@ hevy2garmin's watch strategy is `merge` (Enhance on in Settings) and its sync wi
 ## Evidence
 
 - 2026-11-04: with the start date moved to September and Enhance on, hevy2garmin merged the 13 Hevy workouts into Garmin Connect.
-- 2026-11-05: three Strava activities from 23 Oct, 27 Oct and 3 Nov carry Hevy's weights (for example 45.1 lb, which is Hevy's 20.4 kg), so the merged sets reached Strava. Most exercise names read "Unknown". hevy2garmin documents that Garmin will not show exercise names written into a device-recorded activity (upstream #325).
+- 2026-11-05: the 3 Nov Lower in Garmin Connect shows Hevy's names, reps and weights for all 24 sets, with Training Effect and Body Battery kept. Upstream #325, merged names showing as "Unknown", is fixed in the deployed build (`probability: 100`).
+- Corrected 2026-11-05: this record first read the weights on Strava (24.9, 45.1, 80.1 lb) as merged ones. They are the watch's own, and Strava never takes the merge. See [0020](0020-the-watch-recording-is-what-strava-keeps.md).
 
 ## Alternatives rejected
 
@@ -28,4 +29,4 @@ hevy2garmin's watch strategy is `merge` (Enhance on in Settings) and its sync wi
 
 ## Consequences
 
-Exercise names on Strava stay "Unknown" for merged sets unless the watch recorded them from a planned workout, which is unverified (#25). That gap is why [0002](0002-mirror-trainer-into-routines.md) exists. The setting lives in hevy2garmin's database, not in any manifest, so nothing in git holds it.
+Garmin Connect ends up right; Strava keeps whatever the watch first sent. That gap is why [0002](0002-mirror-trainer-into-routines.md) exists. The setting lives in hevy2garmin's database, not in any manifest, so nothing in git holds it.
