@@ -32,7 +32,7 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0010](0010-program-week-in-names.md) | Routine names carry the program week, counted from the program's start date | 2026-11-05 | Accepted |
 | [0011](0011-ci-bumps-manifests.md) | CI bumps the image tag in Kubernetes-Manifests with one self-merging PR | 2026-11-05 | Accepted |
 | [0012](0012-tag-edited-in-place.md) | CI edits the newTag line in place instead of running kustomize edit | 2026-11-05 | Accepted |
-| [0013](0013-bluebird-issue-flow.md) | Issues follow Bluebird's create-issue flow and labels | 2026-11-05 | Accepted |
+| [0013](0013-bluebird-issue-flow.md) | Issues follow Bluebird's create-issue flow and labels | 2026-11-05 | Accepted. Skill location superseded by 0027 |
 | [0014](0014-routines-stay-in-hevy.md) | The mirrored routines stay in Hevy after they reach Garmin | 2026-11-05 | Accepted |
 | [0015](0015-nothing-upstream-yet.md) | Nothing goes upstream to hevy2garmin until this tool has been polished and tested | 2026-11-05 | Accepted |
 | [0016](0016-garmin-keeps-posting-to-strava.md) | Garmin's own Strava connection stays on | 2026-11-05 | Superseded by 0020 |
@@ -46,3 +46,4 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0024](0024-branch-protection.md) | Main is protected the way Bluebird's is, with Bluebird's Copilot review ruleset | 2026-11-05 | Accepted |
 | [0025](0025-dependabot-with-patch-auto-merge.md) | Dependabot watches pip, Docker and Actions, and patch updates merge themselves | 2026-11-05 | Accepted. Narrows 0005 |
 | [0026](0026-security-scanning.md) | GitHub's security scanning is on, and the released image is re-scanned weekly | 2026-11-05 | Accepted |
+| [0027](0027-shared-create-issue-skill.md) | The create-issue skill is shared from zimmertr/ai-config, and this repo's specifics live in CLAUDE.md | 2026-11-05 | Accepted |
