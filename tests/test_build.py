@@ -87,6 +87,14 @@ class WeightsTest(unittest.TestCase):
             raise AssertionError("scanned further than needed")
         self.assertEqual(build.last_weights(gen(), {"A"}), {"A": 1.0})
 
+    def test_session_without_a_weighted_working_set_is_skipped(self):
+        workouts = [
+            {"exercises": [{"exercise_template_id": "A", "sets": [
+                {"type": "warmup", "weight_kg": 20}, {"type": "normal", "weight_kg": None}]}]},
+            {"exercises": [{"exercise_template_id": "A", "sets": [{"type": "normal", "weight_kg": 35}]}]},
+        ]
+        self.assertEqual(build.last_weights(workouts, {"A"}), {"A": 35.0})
+
 
 if __name__ == "__main__":
     unittest.main()

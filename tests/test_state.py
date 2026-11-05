@@ -41,3 +41,21 @@ class LoadOrBootstrapTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             with self.assertRaises(ValueError):
                 state.load_or_bootstrap(os.path.join(d, "missing.json"), None)
+
+
+class BootstrapShapeTest(unittest.TestCase):
+    def test_json_that_is_not_an_object_is_refused(self):
+        for raw in ("[1, 2]", "%5B%22a%22%5D", '"just a string"'):
+            with self.assertRaisesRegex(ValueError, "expected a JSON object"):
+                state.bootstrap(raw)
+
+
+class SaveTest(unittest.TestCase):
+    def test_written_owner_only_and_read_back(self):
+        import os, stat, tempfile
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "hevy-session.json")
+            state.save(path, {"access_token": "A", "refresh_token": "R"})
+            self.assertEqual(stat.S_IMODE(os.stat(path).st_mode), 0o600)
+            self.assertEqual(state.load(path), {"access_token": "A", "refresh_token": "R"})
+            self.assertEqual([n for n in os.listdir(d) if n.startswith(".tokens-")], [])
