@@ -1,0 +1,9 @@
+[run]
+branch = True
+source = src/hevy_trainer_sync
+
+[report]
+# CI fails below this; every line and branch in the package is tested.
+fail_under = 100
+show_missing = True
+skip_covered = True

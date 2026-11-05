@@ -1,4 +1,5 @@
 import unittest
+from unittest import mock
 
 from hevy_trainer_sync import garmin
 
@@ -42,6 +43,22 @@ class MessageTest(unittest.TestCase):
         self.assertEqual(g._h["Authorization"], "Bearer tok")
         self.assertEqual(g._h["User-Agent"], "GCM-Android-5.23")
         self.assertIn("X-Garmin-User-Agent", g._h)
+
+
+@mock.patch.object(garmin, "request")
+class LastUsedDeviceTest(unittest.TestCase):
+    def test_returns_the_device_id_as_an_int(self, request):
+        request.return_value = ({"userDeviceId": "3456789012", "deviceName": "fenix"}, {})
+        self.assertEqual(garmin.Garmin("tok").last_used_device_id(), 3456789012)
+        self.assertEqual(request.call_args.args,
+                         ("GET", "https://connectapi.garmin.com/device-service/deviceservice/mylastused"))
+        self.assertEqual(request.call_args.kwargs["headers"]["Authorization"], "Bearer tok")
+
+    def test_no_device_is_an_error(self, request):
+        for body in (None, {}, {"userDeviceId": None}, [{"userDeviceId": 1}]):
+            request.return_value = (body, {})
+            with self.assertRaisesRegex(RuntimeError, "no last-used device"):
+                garmin.Garmin("tok").last_used_device_id()
 
 
 if __name__ == "__main__":
