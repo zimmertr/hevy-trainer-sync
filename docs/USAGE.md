@@ -42,7 +42,7 @@ The poller logs one `workout '...' saved; hevy2garmin accepted` line per workout
 | `HTTP 400 from https://api.hevyapp.com/v1/routines/...` | Hevy rejected a routine payload | File a bug with the log; the payload shape is pinned in `test_build.py` |
 | `hevy2garmin: ... failed=N` | hevy2garmin could not build the Garmin workout | Open the dashboard's Routines page for the error |
 | `send to device failed for ...` | Garmin refused the device message | The workout is still in Garmin Connect; Send to Device there works by hand. File a bug with the log |
-| `reading Hevy workout events failed` (poller) | Hevy's public API is down or the key is wrong | Nothing; the poller retries every minute and catches up |
+| `reading Hevy workout events failed` (poller) | Hevy's public API is down, the key is wrong, or the cluster could not reach it (`<urlopen error ...>`) | Nothing; the poller retries every minute and catches up |
 | `asking hevy2garmin to merge ... failed` (poller) | The dashboard is down, or `CRON_SECRET` does not match | Check the dashboard pod and the secret. hevy2garmin's own schedule still merges after two hours |
 
 ## Running it by hand

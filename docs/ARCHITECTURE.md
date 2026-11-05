@@ -42,7 +42,7 @@ Garmin forwards the watch's activity to Strava before the merge can run, and Str
 1. `hevy_public.Client.workout_events()` reads every event since the high-water mark, which starts one interval before the process did.
 2. `poll.new_workouts()` keeps the `updated` events whose `updated_at` is after the mark, oldest first.
 3. For each one, `h2g.trigger_merge()` posts to hevy2garmin's `POST /api/cron/webhook` with `CRON_SECRET`. hevy2garmin answers at once and runs its staged sync in the background: merge-only attempts while the watch's activity reaches Garmin, then a fresh upload on the last attempt.
-4. The mark moves to the last workout that was handed over. If Hevy or hevy2garmin fails, the mark stays put and the next poll tries again.
+4. The mark moves to the last workout that was handed over. If Hevy or hevy2garmin fails, with an HTTP error or no answer at all (DNS, timeout, refused connection), the mark stays put and the next poll tries again.
 
 It needs only the public API key and the cron secret. It never reads or refreshes the Hevy session, so it cannot break the mirror's token chain. Record: [0019](decisions/0019-poll-hevy-every-minute.md).
 

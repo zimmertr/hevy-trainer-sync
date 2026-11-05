@@ -24,6 +24,12 @@ from .http import HttpError
 
 log = logging.getLogger("hevy-trainer-sync.poll")
 
+# What one failed call can raise: an HTTP status, or no answer at all. URLError,
+# timeouts and refused connections are all OSError. Only HttpError was caught
+# until 2026-11-05, so a DNS lookup that failed inside the cluster killed the
+# loop, and the pod restarted four times in nine hours.
+FAILED = (HttpError, OSError)
+
 
 def iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -57,14 +63,14 @@ def tick(hevy: Client, h2g_url: str, cron_secret: str, since: datetime) -> datet
     """One poll. Returns the new high-water mark; unchanged when anything failed, so the next poll tries again."""
     try:
         events = hevy.workout_events(iso(since))
-    except HttpError as e:
+    except FAILED as e:
         log.warning("reading Hevy workout events failed: %s", e)
         return since
     mark = since
     for workout_id, title, updated in new_workouts(events, since):
         try:
             answer = trigger_merge(h2g_url, cron_secret)
-        except HttpError as e:
+        except FAILED as e:
             log.error("asking hevy2garmin to merge %r failed: %s", title, e)
             return mark
         log.info("workout %r (%s) saved; hevy2garmin %s", title, workout_id, answer.get("status") or answer)
