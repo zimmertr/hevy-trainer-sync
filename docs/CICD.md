@@ -47,10 +47,11 @@ flowchart TD
     KM -->|Argo CD sync| C[CronJob and poller use the new tag]
 ```
 
-Every PR runs two workflows:
+Every PR runs three workflows, and all four of their jobs are required checks:
 
 - **test** (`test.yml`): Python 3.13, `pip install -r requirements-dev.txt`, the unittest suite under `coverage`, and `coverage report`, which fails below 100% of lines and branches across the package and `.github/scripts`. Record: [0018](architectural-decision-records/0018-full-coverage.md).
 - **PR Title** (`pr-title.yml`): runs `.github/scripts/check_pr_title.py`, which reads the three patterns from `GitVersion.yml` and fails a title none of them reads. It says on the PR which bump the merge will release, and warns on a major. It reruns when the title is edited.
+- **Lint** and **Docker Build** (`pr.yml`). `Lint` runs ruff 0.16.0 under `ruff.toml`, Bluebird's rule set. `Docker Build` lints the `Dockerfile` with hadolint, builds the `linux/amd64` image without pushing it, and scans it with Trivy under `trivy.yaml`. It posts the result as one comment that each push rewrites (not on Dependabot's PRs, whose token can't comment), and fails on a fixable Critical or High, as the release would. A smoke test then runs the image: `--help` answers, psycopg loads on the image's Python, the zoneinfo data is there, and it runs as UID 1000. Record: [0030](architectural-decision-records/0030-pr-lint-and-image-checks.md).
 
 A push to main runs `release.yml`, one run at a time (`concurrency: release`). It also runs by hand from the Actions tab, from main only.
 

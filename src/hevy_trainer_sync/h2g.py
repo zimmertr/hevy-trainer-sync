@@ -30,12 +30,20 @@ class Dashboard:
 
     def sync_routines(self, routine_ids: list[str]) -> dict:
         """Create or replace the Garmin planned workout for each routine."""
-        body, _ = request("POST", f"{self._base}/api/routines/sync", headers=self._h, body={"ids": routine_ids}, timeout=300)
+        body, _ = request(
+            "POST", f"{self._base}/api/routines/sync", headers=self._h, body={"ids": routine_ids}, timeout=300
+        )
         return body or {}
 
     def schedule(self, routine_id: str, date: str) -> dict:
         """Put the routine's Garmin workout on a calendar date (YYYY-MM-DD)."""
-        body, _ = request("POST", f"{self._base}/api/routines/{routine_id}/schedule", headers=self._h, body={"date": date}, timeout=120)
+        body, _ = request(
+            "POST",
+            f"{self._base}/api/routines/{routine_id}/schedule",
+            headers=self._h,
+            body={"date": date},
+            timeout=120,
+        )
         return body or {}
 
     def unschedule(self, routine_id: str, schedule_id: str) -> dict:

@@ -1,4 +1,5 @@
 import unittest
+from datetime import UTC
 
 from hevy_trainer_sync import build
 
@@ -50,20 +51,75 @@ class RoutineTest(unittest.TestCase):
         payload = build.routine_from_template(TEMPLATE, 7, {"A": 36.29}, "n")
         # What GET /v1/routines returns: extra fields, index, title, float weight.
         fetched = {
-            "id": "x", "title": "Upper", "folder_id": 7, "updated_at": "…",
+            "id": "x",
+            "title": "Upper",
+            "folder_id": 7,
+            "updated_at": "…",
             "exercises": [
-                {"index": 0, "title": "Seal Row", "exercise_template_id": "A", "rest_seconds": 150, "notes": None,
-                 "superset_id": None, "sets": [
-                     {"index": 0, "type": "warmup", "weight_kg": None, "reps": None, "rep_range": None},
-                     {"index": 1, "type": "warmup", "weight_kg": None, "reps": None, "rep_range": None},
-                     {"index": 2, "type": "normal", "weight_kg": 36.290001, "reps": None, "rep_range": {"start": 4, "end": 6}},
-                     {"index": 3, "type": "normal", "weight_kg": 36.29, "reps": None, "rep_range": {"start": 4, "end": 6}},
-                     {"index": 4, "type": "normal", "weight_kg": 36.29, "reps": None, "rep_range": {"start": 4, "end": 6}}]},
-                {"index": 1, "title": "Fly", "exercise_template_id": "B", "rest_seconds": 90, "notes": None,
-                 "superset_id": None, "sets": [
-                     {"index": 0, "type": "normal", "weight_kg": None, "reps": None, "rep_range": {"start": 10, "end": 12}},
-                     {"index": 1, "type": "normal", "weight_kg": None, "reps": None, "rep_range": {"start": 10, "end": 12}},
-                     {"index": 2, "type": "normal", "weight_kg": None, "reps": None, "rep_range": {"start": 10, "end": 12}}]},
+                {
+                    "index": 0,
+                    "title": "Seal Row",
+                    "exercise_template_id": "A",
+                    "rest_seconds": 150,
+                    "notes": None,
+                    "superset_id": None,
+                    "sets": [
+                        {"index": 0, "type": "warmup", "weight_kg": None, "reps": None, "rep_range": None},
+                        {"index": 1, "type": "warmup", "weight_kg": None, "reps": None, "rep_range": None},
+                        {
+                            "index": 2,
+                            "type": "normal",
+                            "weight_kg": 36.290001,
+                            "reps": None,
+                            "rep_range": {"start": 4, "end": 6},
+                        },
+                        {
+                            "index": 3,
+                            "type": "normal",
+                            "weight_kg": 36.29,
+                            "reps": None,
+                            "rep_range": {"start": 4, "end": 6},
+                        },
+                        {
+                            "index": 4,
+                            "type": "normal",
+                            "weight_kg": 36.29,
+                            "reps": None,
+                            "rep_range": {"start": 4, "end": 6},
+                        },
+                    ],
+                },
+                {
+                    "index": 1,
+                    "title": "Fly",
+                    "exercise_template_id": "B",
+                    "rest_seconds": 90,
+                    "notes": None,
+                    "superset_id": None,
+                    "sets": [
+                        {
+                            "index": 0,
+                            "type": "normal",
+                            "weight_kg": None,
+                            "reps": None,
+                            "rep_range": {"start": 10, "end": 12},
+                        },
+                        {
+                            "index": 1,
+                            "type": "normal",
+                            "weight_kg": None,
+                            "reps": None,
+                            "rep_range": {"start": 10, "end": 12},
+                        },
+                        {
+                            "index": 2,
+                            "type": "normal",
+                            "weight_kg": None,
+                            "reps": None,
+                            "rep_range": {"start": 10, "end": 12},
+                        },
+                    ],
+                },
             ],
         }
         self.assertEqual(build.normalize(payload), build.normalize(fetched))
@@ -74,10 +130,24 @@ class RoutineTest(unittest.TestCase):
 class WeightsTest(unittest.TestCase):
     def test_newest_session_last_working_set_wins(self):
         workouts = [
-            {"exercises": [{"exercise_template_id": "A", "sets": [
-                {"type": "warmup", "weight_kg": 20}, {"type": "normal", "weight_kg": 40}, {"type": "normal", "weight_kg": 42.5}]}]},
-            {"exercises": [{"exercise_template_id": "A", "sets": [{"type": "normal", "weight_kg": 30}]},
-                           {"exercise_template_id": "B", "sets": [{"type": "normal", "weight_kg": 10}]}]},
+            {
+                "exercises": [
+                    {
+                        "exercise_template_id": "A",
+                        "sets": [
+                            {"type": "warmup", "weight_kg": 20},
+                            {"type": "normal", "weight_kg": 40},
+                            {"type": "normal", "weight_kg": 42.5},
+                        ],
+                    }
+                ]
+            },
+            {
+                "exercises": [
+                    {"exercise_template_id": "A", "sets": [{"type": "normal", "weight_kg": 30}]},
+                    {"exercise_template_id": "B", "sets": [{"type": "normal", "weight_kg": 10}]},
+                ]
+            },
         ]
         self.assertEqual(build.last_weights(iter(workouts), {"A", "B", "C"}), {"A": 42.5, "B": 10.0})
 
@@ -102,19 +172,19 @@ if __name__ == "__main__":
 
 class ProgramWeekTitleTest(unittest.TestCase):
     def test_week_counts_from_the_program_start(self):
-        from datetime import datetime, timezone
+        from datetime import datetime
         start = "2026-09-14T20:26:40.922Z"
-        self.assertEqual(build.program_week(start, datetime(2026, 9, 14, 21, tzinfo=timezone.utc)), 1)
-        self.assertEqual(build.program_week(start, datetime(2026, 9, 21, 19, tzinfo=timezone.utc)), 1)
-        self.assertEqual(build.program_week(start, datetime(2026, 9, 21, 21, tzinfo=timezone.utc)), 2)
+        self.assertEqual(build.program_week(start, datetime(2026, 9, 14, 21, tzinfo=UTC)), 1)
+        self.assertEqual(build.program_week(start, datetime(2026, 9, 21, 19, tzinfo=UTC)), 1)
+        self.assertEqual(build.program_week(start, datetime(2026, 9, 21, 21, tzinfo=UTC)), 2)
         # 4 Nov 2026: the app showed cycle 2, week 2 of a 6-week cycle.
-        self.assertEqual(build.program_week(start, datetime(2026, 11, 4, 23, tzinfo=timezone.utc)), 8)
+        self.assertEqual(build.program_week(start, datetime(2026, 11, 4, 23, tzinfo=UTC)), 8)
 
     def test_bad_or_missing_start_means_no_week(self):
         self.assertIsNone(build.program_week(None))
         self.assertIsNone(build.program_week("not a date"))
-        from datetime import datetime, timezone
-        self.assertIsNone(build.program_week("2026-09-14T20:26:40Z", datetime(2026, 9, 1, tzinfo=timezone.utc)))
+        from datetime import datetime
+        self.assertIsNone(build.program_week("2026-09-14T20:26:40Z", datetime(2026, 9, 1, tzinfo=UTC)))
 
     def test_title_with_and_without_week(self):
         self.assertEqual(build.title("upper_2x_a", 8), "Upper W8")

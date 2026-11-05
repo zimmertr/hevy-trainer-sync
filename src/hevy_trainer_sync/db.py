@@ -25,7 +25,8 @@ def schedules(database_url: str, routine_ids: list[str]) -> list[tuple[str, str,
         return []
     with _connect(database_url) as conn:
         rows = conn.execute(
-            "SELECT hevy_routine_id, schedule_id, scheduled_date FROM routine_schedules WHERE hevy_routine_id = ANY(%s)",
+            "SELECT hevy_routine_id, schedule_id, scheduled_date FROM routine_schedules "
+            "WHERE hevy_routine_id = ANY(%s)",
             (routine_ids,),
         ).fetchall()
     return [(str(r), str(s), (str(d)[:10] if d else None)) for r, s, d in rows]
@@ -48,7 +49,8 @@ def garmin_di_token(database_url: str) -> str:
     """The dashboard's current Garmin bearer token."""
     with _connect(database_url) as conn:
         row = conn.execute(
-            "SELECT credentials->'garmin_tokens'->>'di_token' FROM platform_credentials WHERE platform = 'garmin_tokens'"
+            "SELECT credentials->'garmin_tokens'->>'di_token' FROM platform_credentials "
+            "WHERE platform = 'garmin_tokens'"
         ).fetchone()
     token = row[0] if row else None
     if not token:

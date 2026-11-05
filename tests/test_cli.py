@@ -213,7 +213,9 @@ class MainTest(unittest.TestCase):
             _, logs = self.run_main()
         week.assert_called_once_with("2026-09-14T20:26:40Z")
         self.assertIn("program week 8 (started 2026-09-14T20:26:40Z)", logs)
-        self.assertEqual([c.args[0]["title"] for c in self.hevy.create_routine.call_args_list], ["Upper W8", "Lower W8"])
+        self.assertEqual(
+            [c.args[0]["title"] for c in self.hevy.create_routine.call_args_list], ["Upper W8", "Lower W8"]
+        )
 
     def test_unchanged_routines_are_left_alone(self):
         self.existing_upper_and_lower()

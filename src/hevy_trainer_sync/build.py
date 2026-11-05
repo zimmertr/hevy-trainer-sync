@@ -1,7 +1,7 @@
 """Pure functions: Trainer template in, routine payload out. No I/O, so this is what the tests cover."""
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 _FREQ = re.compile(r"^\d+x$")
 
@@ -32,7 +32,7 @@ def program_week(created_at: str | None, now: datetime | None = None) -> int | N
         start = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
     except ValueError:
         return None
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     days = (now - start).days
     return days // 7 + 1 if days >= 0 else None
 
@@ -78,7 +78,12 @@ def routine_from_template(template: dict, folder_id: int | None, weights_kg: dic
             "notes": None,
             "sets": sets,
         })
-    return {"title": title_override or title_from_key(template["key"]), "folder_id": folder_id, "notes": notes, "exercises": exercises}
+    return {
+        "title": title_override or title_from_key(template["key"]),
+        "folder_id": folder_id,
+        "notes": notes,
+        "exercises": exercises,
+    }
 
 
 def _norm_set(s: dict) -> tuple:

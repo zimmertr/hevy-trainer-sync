@@ -16,10 +16,10 @@ import logging
 import os
 import sys
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-from .hevy_public import Client
 from .h2g import trigger_merge
+from .hevy_public import Client
 from .http import HttpError
 
 log = logging.getLogger("hevy-trainer-sync.poll")
@@ -32,7 +32,7 @@ FAILED = (HttpError, OSError)
 
 
 def iso(dt: datetime) -> str:
-    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return dt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def parse(ts: str) -> datetime:
@@ -86,7 +86,7 @@ def env(name: str, default: str | None = None) -> str:
     return v
 
 
-def main(argv: list[str] | None = None, *, sleep=time.sleep, now=lambda: datetime.now(timezone.utc),
+def main(argv: list[str] | None = None, *, sleep=time.sleep, now=lambda: datetime.now(UTC),
          ticks: int | None = None) -> int:
     """Poll until stopped. `sleep`, `now` and `ticks` exist for the tests."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")

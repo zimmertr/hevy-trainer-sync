@@ -6,7 +6,7 @@ Hevy can change or close them without notice.
 """
 
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from .http import HttpError, request
 
@@ -32,7 +32,7 @@ class Session:
         if not raw or not self.tokens.get("access_token"):
             return True
         exp = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-        return exp <= datetime.now(timezone.utc)
+        return exp <= datetime.now(UTC)
 
     def refresh(self) -> None:
         # Verified 4 Nov 2026: without the Bearer header, expired or not, Hevy

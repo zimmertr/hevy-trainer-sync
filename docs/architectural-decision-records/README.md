@@ -49,3 +49,4 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0027](0027-shared-create-issue-skill.md) | The create-issue skill is shared from zimmertr/ai-config, and this repo's specifics live in CLAUDE.md | 2026-11-05 | Accepted |
 | [0028](0028-records-in-architectural-decision-records.md) | Decision records live in `docs/architectural-decision-records/`, the name every new project uses | 2026-11-05 | Accepted |
 | [0029](0029-repo-files-and-make-targets.md) | The repo carries CONTRIBUTING, NOTICES and a Makefile whose targets mirror CI, each in Docker | 2026-11-05 | Accepted |
+| [0030](0030-pr-lint-and-image-checks.md) | Every PR is linted, and builds, scans and smoke-tests the image it would ship | 2026-11-05 | Accepted |

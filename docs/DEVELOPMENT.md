@@ -26,6 +26,8 @@ Only when CI is not enough, for example to iterate on one failing test. Every ch
 |---|---|
 | `make test` | The suite under coverage, failing below 100%, as the `test` job does |
 | `make test-one MODULE=tests.test_build` | One module, verbose |
+| `make lint` | ruff under `ruff.toml`, as the `Lint` job does |
+| `make lint-docker` | hadolint on the `Dockerfile`, as the `Docker Build` job does first |
 | `make build` | `docker build -t hevy-trainer-sync:dev .` |
 | `make scan` | Builds, then scans the build with Trivy under `trivy.yaml`, failing on a fixable Critical or High, as the release does |
 
