@@ -1,6 +1,6 @@
 # 0005. Images are built only by CI, and main changes only through PRs
 
-- Status: Accepted. Its tag convention is superseded by 0021
+- Status: Accepted. Its tag convention is superseded by 0021, and its approval rule is narrowed by 0025
 - Date: 2026-11-04
 - Decider: TJ
 - Issues and PRs: #1

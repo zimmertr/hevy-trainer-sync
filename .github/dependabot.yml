@@ -1,15 +1,46 @@
 version: 2
+# Bluebird's set, for this repo's three ecosystems. Every title is
+# `build(deps): ...` or `build(deps-dev): ...`, which the PR Title check and
+# GitVersion read as a patch. Patch-level version updates merge themselves
+# (dependabot-auto-merge.yml); everything else waits for review. Decision
+# records 0023 and 0025.
 updates:
+  # requirements.txt and requirements-dev.txt. Seven days after a release
+  # before proposing it: a patch merges itself and a merge deploys, so without
+  # the wait a release published the day before the weekly run would be live
+  # that morning. Security updates do not wait; GitHub documents cooldown as
+  # version updates only.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: build
+      include: scope
+
   # Every action is pinned to a commit SHA with its version in a comment.
   # Dependabot reads the comment, proposes the next release, and rewrites the
-  # SHA and the comment together, so a pin moves only by PR. Decision record 0023.
+  # SHA and the comment together, so a pin moves only by PR.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    # `build(deps): Bump ...`, a title the PR Title check and GitVersion read
-    # as a patch.
+    commit-message:
+      prefix: build
+      include: scope
+
+  # The base image, pinned as tag@digest. An upstream rebuild under the same
+  # tag arrives as a digest PR, which is also the usual remedy when the weekly
+  # image scan finds a fixable Critical or High.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
     commit-message:
       prefix: build
       include: scope

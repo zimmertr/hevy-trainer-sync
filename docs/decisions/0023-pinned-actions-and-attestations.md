@@ -1,6 +1,6 @@
 # 0023. Every action is pinned to a commit, and the image carries an SBOM and provenance
 
-- Status: Accepted
+- Status: Accepted. Its "no Dependabot auto-merge" consequence is superseded by 0025
 - Date: 2026-11-05
 - Decider: TJ (chose "Actions pinned to SHAs" and "SBOM + provenance" from Bluebird's release hardening)
 - Issues and PRs: #32

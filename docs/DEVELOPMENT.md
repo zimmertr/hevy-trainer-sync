@@ -16,7 +16,7 @@ CI is the test runner. Push a branch, open a draft PR, and read the `test` job. 
 
    The coverage table is at the end of the `test` job's log, with the missing lines and branches for any file under 100%.
 5. Update the docs the change makes untrue, and add a decision record for any decision, in the same PR ([decisions/README.md](decisions/README.md)).
-6. Mark the PR ready. After TJ approves, it is squash-merged, which releases it, and [CICD.md](CICD.md) takes over.
+6. Mark the PR ready. Resolve every conversation on it, because main will not merge with one open. After TJ approves, it is squash-merged, which releases it, and [CICD.md](CICD.md) takes over.
 
 ## Running the tests in Docker
 
