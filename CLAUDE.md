@@ -25,8 +25,8 @@ Every decision gets a record in the same PR that makes it, and the rule below th
 - This tool reads Trainer's program from Hevy's private API and writes one routine per template into the `Hevy Trainer` folder, which hevy2garmin syncs to Garmin. Record: [0002](docs/decisions/0002-mirror-trainer-into-routines.md)
 - It runs hourly as CronJob `hevy-trainer-sync`, one run at a time. Record: [0007](docs/decisions/0007-hourly-cronjob.md)
 - The routines stay in Hevy; hevy2garmin is keyed on their ids. Record: [0014](docs/decisions/0014-routines-stay-in-hevy.md)
-- Garmin's own Strava connection stays on, so the first Strava post is the watch's version until the merge lands. Record: [0016](docs/decisions/0016-garmin-keeps-posting-to-strava.md)
-- `poll` reads Hevy's workout events every 60 seconds from inside the cluster and calls hevy2garmin's webhook route for each new workout, so the merge lands within minutes. Nothing is exposed, and the poller never touches the Hevy session. Record: [0019](docs/decisions/0019-poll-hevy-every-minute.md)
+- Strava keeps exactly what the watch recorded; the merge never reaches it. So the planned workout on the watch must carry the right exercises, sets, rep targets and weights. Garmin's own Strava connection stays on, and this tool never uploads to Strava. Record: [0020](docs/decisions/0020-the-watch-recording-is-what-strava-keeps.md)
+- `poll` reads Hevy's workout events every 60 seconds from inside the cluster and calls hevy2garmin's webhook route for each new workout, so Garmin Connect has the merge within minutes. Nothing is exposed, and the poller never touches the Hevy session. Record: [0019](docs/decisions/0019-poll-hevy-every-minute.md)
 
 ## Rules
 

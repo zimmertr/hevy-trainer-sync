@@ -34,7 +34,8 @@ hevy2garmin's staged sync is tuned in its Deployment: first attempt after 60 sec
 
 ## Consequences
 
-- Strava shows the merged sets a few minutes after the watch syncs, instead of two hours later. The very first post is still the watch's version.
+- Garmin Connect shows the merged sets a few minutes after the watch syncs, instead of two hours later.
+- Corrected 2026-11-05: this record first said Strava would show the merged sets too. It does not; Strava keeps the watch's first post ([0020](0020-the-watch-recording-is-what-strava-keeps.md)). The poller still keeps Garmin Connect current.
 - If the watch syncs more than about 28 minutes after the workout is saved in Hevy, the last attempt uploads a fresh activity and the watch's own copy arrives later as a second one. That is upstream's trade-off with a slightly longer window, and the scheduled sync had the same failure at two hours. #24 tracks widening it.
 - Hevy sees 1,440 small event reads a day. A restart loses at most the poll in flight; the poller starts one interval back, and hevy2garmin's scheduled sync still catches anything missed after two hours.
 - The routine for the next session still waits for the hourly mirror ([0007](0007-hourly-cronjob.md)).
