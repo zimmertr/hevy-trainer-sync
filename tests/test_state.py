@@ -2,7 +2,9 @@ import unittest
 
 from hevy_trainer_sync import state
 
-COOKIE = "{%22access_token%22:%22AAA%22%2C%22refresh_token%22:%22r/+r%22%2C%22expires_at%22:%222026-11-04T23:02:17.449Z%22}"
+COOKIE = (
+    "{%22access_token%22:%22AAA%22%2C%22refresh_token%22:%22r/+r%22%2C%22expires_at%22:%222026-11-04T23:02:17.449Z%22}"
+)
 
 
 class BootstrapTest(unittest.TestCase):
@@ -26,7 +28,8 @@ if __name__ == "__main__":
 
 class LoadOrBootstrapTest(unittest.TestCase):
     def test_bootstrap_is_saved_so_the_next_run_reads_the_file(self):
-        import os, tempfile
+        import os
+        import tempfile
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "sub", "hevy-session.json")
             first, bootstrapped = state.load_or_bootstrap(path, COOKIE)
@@ -37,7 +40,8 @@ class LoadOrBootstrapTest(unittest.TestCase):
             self.assertEqual(first, second)
 
     def test_no_file_and_no_cookie_is_an_error(self):
-        import os, tempfile
+        import os
+        import tempfile
         with tempfile.TemporaryDirectory() as d:
             with self.assertRaises(ValueError):
                 state.load_or_bootstrap(os.path.join(d, "missing.json"), None)
@@ -52,7 +56,9 @@ class BootstrapShapeTest(unittest.TestCase):
 
 class SaveTest(unittest.TestCase):
     def test_written_owner_only_and_read_back(self):
-        import os, stat, tempfile
+        import os
+        import stat
+        import tempfile
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "hevy-session.json")
             state.save(path, {"access_token": "A", "refresh_token": "R"})

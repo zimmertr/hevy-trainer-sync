@@ -28,13 +28,19 @@ def bootstrap(raw: str) -> dict:
         try:
             data = json.loads(urllib.parse.unquote(text))
         except ValueError:
-            raise ValueError("HEVY_SESSION is not the auth2.0-token cookie: expected JSON with access_token and refresh_token") from None
+            raise ValueError(
+                "HEVY_SESSION is not the auth2.0-token cookie: expected JSON with access_token and refresh_token"
+            ) from None
     if not isinstance(data, dict):
         raise ValueError("HEVY_SESSION is not the auth2.0-token cookie: expected a JSON object")
     missing = [k for k in REQUIRED if not data.get(k)]
     if missing:
         raise ValueError(f"HEVY_SESSION is missing {', '.join(missing)}")
-    return {"access_token": data["access_token"], "refresh_token": data["refresh_token"], "expires_at": data.get("expires_at")}
+    return {
+        "access_token": data["access_token"],
+        "refresh_token": data["refresh_token"],
+        "expires_at": data.get("expires_at"),
+    }
 
 
 def load_or_bootstrap(path: str, raw: str | None) -> tuple[dict, bool]:

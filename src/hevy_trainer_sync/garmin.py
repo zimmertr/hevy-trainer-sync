@@ -14,7 +14,9 @@ from .http import request
 BASE = "https://connectapi.garmin.com"
 HEADERS = {
     "User-Agent": "GCM-Android-5.23",
-    "X-Garmin-User-Agent": "com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0",
+    "X-Garmin-User-Agent": (
+        "com.garmin.android.apps.connectmobile/5.23; ; Google/sdk_gphone64_arm64/google; Android/33; Dalvik/2.1.0"
+    ),
     "X-Garmin-Paired-App-Version": "10861",
     "X-Garmin-Client-Platform": "Android",
     "X-App-Ver": "10861",

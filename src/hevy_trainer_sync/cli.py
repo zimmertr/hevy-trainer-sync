@@ -9,8 +9,8 @@ from . import build, db, schedule, state
 from .garmin import Garmin
 from .h2g import Dashboard
 from .hevy_private import Session
-from .http import HttpError
 from .hevy_public import Client
+from .http import HttpError
 
 log = logging.getLogger("hevy-trainer-sync")
 
@@ -65,7 +65,9 @@ def main(argv: list[str] | None = None) -> int:
         from . import poll
         return poll.main(argv[1:])
     ap = argparse.ArgumentParser(prog="hevy-trainer-sync")
-    ap.add_argument("--dry-run", action="store_true", help="read everything, write nothing (tokens are still refreshed)")
+    ap.add_argument(
+        "--dry-run", action="store_true", help="read everything, write nothing (tokens are still refreshed)"
+    )
     ap.add_argument("--force", action="store_true", help="trigger the hevy2garmin sync even when no routine changed")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -106,7 +108,9 @@ def main(argv: list[str] | None = None) -> int:
         log.info("creating routine folder %r", folder_title)
         folder = {"id": None} if args.dry_run else hevy.create_folder(folder_title)
     folder_id = folder.get("id")
-    existing = {r["title"]: r for r in hevy.routines() if r.get("folder_id") == folder_id} if folder_id is not None else {}
+    existing = (
+        {r["title"]: r for r in hevy.routines() if r.get("folder_id") == folder_id} if folder_id is not None else {}
+    )
 
     # Every routine this job owns, by base title, whether it existed or was just made.
     week = build.program_week(program.get("created_at"))
@@ -124,8 +128,18 @@ def main(argv: list[str] | None = None) -> int:
         if current and build.normalize(current) == build.normalize(payload):
             log.info("%s: unchanged", payload["title"])
             continue
-        verb = f"update ({current['title']} -> {payload['title']})" if current and current["title"] != payload["title"] else ("update" if current else "create")
-        log.info("%s: %s (%d exercises)%s", payload["title"], verb, len(payload["exercises"]), " [dry run]" if args.dry_run else "")
+        verb = (
+            f"update ({current['title']} -> {payload['title']})"
+            if current and current["title"] != payload["title"]
+            else ("update" if current else "create")
+        )
+        log.info(
+            "%s: %s (%d exercises)%s",
+            payload["title"],
+            verb,
+            len(payload["exercises"]),
+            " [dry run]" if args.dry_run else "",
+        )
         if args.dry_run:
             continue
         saved = hevy.update_routine(current["id"], payload) if current else hevy.create_routine(payload)
@@ -140,7 +154,12 @@ def main(argv: list[str] | None = None) -> int:
     to_push = list(managed.values()) if args.force else changed
     if to_push:
         result = dashboard.sync_routines(to_push)
-        log.info("hevy2garmin: synced=%s skipped=%s failed=%s", result.get("synced"), result.get("skipped"), result.get("failed"))
+        log.info(
+            "hevy2garmin: synced=%s skipped=%s failed=%s",
+            result.get("synced"),
+            result.get("skipped"),
+            result.get("failed"),
+        )
         for r in result.get("results", []):
             log.info("  %s: %s %s", r.get("title"), r.get("status"), r.get("error") or "")
         if not result.get("ok"):
@@ -171,7 +190,12 @@ def main(argv: list[str] | None = None) -> int:
         log.info("unscheduled stale entry %s: %s", schedule_id, "ok" if r.get("ok") else r.get("error"))
     if plan.schedule:
         r = dashboard.schedule(next_id, today)
-        log.info("scheduled %s on %s: %s", build.title_from_key(next_template["key"]), today, "ok" if r.get("ok") else r.get("error"))
+        log.info(
+            "scheduled %s on %s: %s",
+            build.title_from_key(next_template["key"]),
+            today,
+            "ok" if r.get("ok") else r.get("error"),
+        )
         if not r.get("ok"):
             return 1
     else:

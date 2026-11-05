@@ -59,7 +59,9 @@ class WriteTest(unittest.TestCase):
         c = hevy_public.Client("key")
         request.return_value = ({"routine": [{"id": "r1"}]}, {})
         self.assertEqual(c.create_routine({"title": "Upper"}), {"id": "r1"})
-        request.assert_called_with("POST", f"{BASE}/routines", headers={"api-key": "key"}, body={"routine": {"title": "Upper"}})
+        request.assert_called_with(
+            "POST", f"{BASE}/routines", headers={"api-key": "key"}, body={"routine": {"title": "Upper"}}
+        )
         request.return_value = ({"routine": {"id": "r2"}}, {})
         self.assertEqual(c.create_routine({"title": "Upper"}), {"id": "r2"})
 
@@ -67,7 +69,9 @@ class WriteTest(unittest.TestCase):
         c = hevy_public.Client("key")
         request.return_value = ({"routine": [{"id": "r1"}]}, {})
         self.assertEqual(c.update_routine("r1", {"title": "Upper"}), {"id": "r1"})
-        request.assert_called_with("PUT", f"{BASE}/routines/r1", headers={"api-key": "key"}, body={"routine": {"title": "Upper"}})
+        request.assert_called_with(
+            "PUT", f"{BASE}/routines/r1", headers={"api-key": "key"}, body={"routine": {"title": "Upper"}}
+        )
         request.return_value = ({"routine": {"id": "r1"}}, {})
         self.assertEqual(c.update_routine("r1", {"title": "Upper"}), {"id": "r1"})
 

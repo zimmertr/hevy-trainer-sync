@@ -1,13 +1,13 @@
 import os
 import unittest
 import urllib.error
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from unittest import mock
 
 from hevy_trainer_sync import poll
 from hevy_trainer_sync.http import HttpError
 
-T0 = datetime(2026, 11, 5, 18, 0, tzinfo=timezone.utc)
+T0 = datetime(2026, 11, 5, 18, 0, tzinfo=UTC)
 
 
 def event(kind="updated", wid="w1", title="Upper", updated="2026-11-05T18:01:00Z"):
@@ -140,11 +140,13 @@ class MainTest(unittest.TestCase):
 
     def run_main(self, env, ticks=2):
         sleep = mock.Mock()
-        with mock.patch.dict(os.environ, env, clear=True), \
-                mock.patch.object(poll, "Client") as client, \
-                mock.patch.object(poll, "tick", side_effect=lambda h, u, s, since: since + timedelta(seconds=1)) as tick, \
-                mock.patch.object(poll.logging, "basicConfig"), \
-                self.assertLogs("hevy-trainer-sync.poll", "INFO"):
+        with (
+            mock.patch.dict(os.environ, env, clear=True),
+            mock.patch.object(poll, "Client") as client,
+            mock.patch.object(poll, "tick", side_effect=lambda h, u, s, since: since + timedelta(seconds=1)) as tick,
+            mock.patch.object(poll.logging, "basicConfig"),
+            self.assertLogs("hevy-trainer-sync.poll", "INFO"),
+        ):
             rc = poll.main([], sleep=sleep, now=lambda: T0, ticks=ticks)
         return rc, client, tick, sleep
 

@@ -14,11 +14,7 @@ Prose lives in `docs/`. A change that makes any of it untrue updates it in the s
 | [`docs/USAGE.md`](docs/USAGE.md) | What TJ sees in Hevy, on the watch and on Strava, and what to do when it breaks |
 | [`docs/DATA.md`](docs/DATA.md) | What each source returns, and every quirk found, dated |
 | [`docs/TRAFFIC.md`](docs/TRAFFIC.md) | Every outbound call per run, timeouts and retries |
-<<<<<<< HEAD
 | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | The CI-first loop, the `make` targets, how to write tests |
-=======
-| [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | The CI-first loop, Docker commands, how to write tests |
->>>>>>> origin/main
 | [`docs/architectural-decision-records/`](docs/architectural-decision-records/README.md) | One record per decision. The README is the index and says how to write one. Record: [0028](docs/architectural-decision-records/0028-records-in-architectural-decision-records.md) |
 
 Every decision gets a record in the same PR that makes it, and the rule below that states it links to it.
@@ -61,7 +57,7 @@ File issues with the `create-issue` skill: the two-sentence summary, the six sec
 
 - Work in a fresh clone in the session's scratchpad, never in TJ's checkout. Branch from the latest `origin/main`.
 - Everything reaches main through a PR that TJ approves. Never push to main. Record: [0005](docs/architectural-decision-records/0005-images-from-ci-prs-only.md)
-- **Branch protection enforces it**, admins included: `test` and `PR Title` must pass and every conversation must be resolved before a PR can merge. A ruleset asks Copilot to review each PR, as on Bluebird, though neither repo has had a Copilot review from it yet. Renaming either job means updating the required checks in the same change. Record: [0024](docs/architectural-decision-records/0024-branch-protection.md)
+- **Branch protection enforces it**, admins included: `test`, `PR Title`, `Lint` and `Docker Build` must pass and every conversation must be resolved before a PR can merge. A ruleset asks Copilot to review each PR, as on Bluebird, though neither repo has had a Copilot review from it yet. Renaming any of those jobs means updating the required checks in the same change. Records: [0024](docs/architectural-decision-records/0024-branch-protection.md), [0030](docs/architectural-decision-records/0030-pr-lint-and-image-checks.md)
 - **Dependabot's patch updates are the one exception:** they merge themselves once those checks pass, then release and deploy. Minor, major and digest-only updates wait for TJ. Record: [0025](docs/architectural-decision-records/0025-dependabot-with-patch-auto-merge.md)
 - CI builds and pushes the image; never build or push one by hand. Record: [0005](docs/architectural-decision-records/0005-images-from-ci-prs-only.md)
 - **Every merge to main is a release.** GitVersion reads the bump from the PR title, so every PR title is `type(scope): summary` with Bluebird's types; `feat` is a minor, a `!` before the colon is a major, the rest are patches, and the body never counts. The `PR Title` check fails any other title. Image tags and git tags are the version, never a SHA, and releases are immutable. Record: [0021](docs/architectural-decision-records/0021-semver-release-per-merge.md)

@@ -3,10 +3,13 @@
 
 PYTHON_IMAGE := python:3.13-slim
 TRIVY_IMAGE  := aquasec/trivy:0.68.1
+# The same versions pr.yml runs; move them together.
+RUFF_IMAGE   := ghcr.io/astral-sh/ruff:0.16.0
+HADOLINT     := hadolint/hadolint:v2.12.0
 IMAGE        := hevy-trainer-sync:dev
 RUN          := docker run --rm -v "$(CURDIR)":/repo -w /repo
 
-.PHONY: test test-one build scan
+.PHONY: test test-one lint lint-docker build scan
 
 # The suite under coverage, failing below 100% of lines and branches, as the
 # test job does.
@@ -19,6 +22,14 @@ test:
 test-one:
 	$(RUN) $(PYTHON_IMAGE) sh -c 'pip install -q -r requirements-dev.txt && \
 	  PYTHONPATH=src python -m unittest $(MODULE) -v'
+
+# The Lint job: ruff under ruff.toml.
+lint:
+	$(RUN) $(RUFF_IMAGE) check .
+
+# The Docker Build job's first step.
+lint-docker:
+	docker run --rm -i $(HADOLINT) < Dockerfile
 
 build:
 	docker build -t $(IMAGE) .

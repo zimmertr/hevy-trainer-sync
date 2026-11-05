@@ -43,15 +43,25 @@ class RoutesTest(unittest.TestCase):
         d = self.dashboard(request)
         request.return_value = ({"ok": True, "scheduleId": None}, {})
         self.assertEqual(d.schedule("r1", "2026-11-05"), {"ok": True, "scheduleId": None})
-        request.assert_called_once_with("POST", "http://h2g/api/routines/r1/schedule", headers={"Cookie": "h2g_session=abc"},
-                                        body={"date": "2026-11-05"}, timeout=120)
+        request.assert_called_once_with(
+            "POST",
+            "http://h2g/api/routines/r1/schedule",
+            headers={"Cookie": "h2g_session=abc"},
+            body={"date": "2026-11-05"},
+            timeout=120,
+        )
 
     def test_unschedule(self, request):
         d = self.dashboard(request)
         request.return_value = ({"ok": True}, {})
         self.assertEqual(d.unschedule("r1", "s1"), {"ok": True})
-        request.assert_called_once_with("POST", "http://h2g/api/routines/r1/unschedule", headers={"Cookie": "h2g_session=abc"},
-                                        body={"scheduleId": "s1"}, timeout=120)
+        request.assert_called_once_with(
+            "POST",
+            "http://h2g/api/routines/r1/unschedule",
+            headers={"Cookie": "h2g_session=abc"},
+            body={"scheduleId": "s1"},
+            timeout=120,
+        )
 
     def test_empty_answers_are_empty_dicts(self, request):
         d = self.dashboard(request)

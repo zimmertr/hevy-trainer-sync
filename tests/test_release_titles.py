@@ -87,9 +87,13 @@ class TitleTest(unittest.TestCase):
     def test_the_patterns_are_bluebirds(self):
         # Identical to Bluebird's GitVersion.yml (its decision 0080), so a title
         # means the same bump in both repos.
-        self.assertEqual(PATTERNS["major"].pattern, r"^(feat|fix|perf|refactor|chore|docs|style|test|ci|build)(\([^)\r\n]+\))?!:")
+        self.assertEqual(
+            PATTERNS["major"].pattern, r"^(feat|fix|perf|refactor|chore|docs|style|test|ci|build)(\([^)\r\n]+\))?!:"
+        )
         self.assertEqual(PATTERNS["minor"].pattern, r"^feat(\([^)\r\n]+\))?:")
-        self.assertEqual(PATTERNS["patch"].pattern, r"^(fix|perf|refactor|chore|docs|style|test|ci|build)(\([^)\r\n]+\))?:")
+        self.assertEqual(
+            PATTERNS["patch"].pattern, r"^(fix|perf|refactor|chore|docs|style|test|ci|build)(\([^)\r\n]+\))?:"
+        )
 
     def test_a_config_missing_a_pattern_is_refused(self):
         with tempfile.TemporaryDirectory() as d:
