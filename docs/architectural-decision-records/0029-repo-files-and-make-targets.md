@@ -9,14 +9,13 @@
 
 ## Context
 
-`initialize-project` lists the files every repo carries and asks for every CI check to be a `make` target in Docker. Against that list, this repo had `LICENSE`, `.gitignore`, `README.md`, `SECURITY.md`, the issue templates and `CLAUDE.md`, but no `CONTRIBUTING.md`, `NOTICES.md` or Makefile, and nothing set Claude Code's attribution for the repo.
+`initialize-project` lists the files every repo carries and asks for every CI check to be a `make` target in Docker. Against that list, this repo had `LICENSE`, `.gitignore`, `README.md`, `SECURITY.md`, the issue templates and `CLAUDE.md`, but no `CONTRIBUTING.md`, `NOTICES.md` or Makefile.
 
 ## Decision
 
 - `CONTRIBUTING.md`: how to send a change: the `make` targets, tests at 100%, the PR title, the owning docs page and a record, and no personal data.
 - `NOTICES.md`: the services this talks to (Hevy, Garmin Connect, hevy2garmin) and the software bundled in the image, with each license, pointing to the release's SBOM attestation for the full list.
 - `Makefile`: `test`, `test-one`, `build` and `scan`, each in Docker, each running what CI runs. Later CI checks add their own target.
-- `.claude/settings.json` sets `"attribution": false`, so no Claude Code session in this repo attributes its commits or PRs.
 
 ## Evidence
 
@@ -26,6 +25,7 @@
 ## Alternatives rejected
 
 - A `docker-compose.yml`: `initialize-project` asks for one to run a project with its backing services, but this tool's are hevy2garmin and its Postgres in the cluster, and a local run against the real account is discouraged (0006). Compose would have nothing to bring up.
+- A `.claude/settings.json` setting `"attribution": false` for the repo: TJ's global settings already set it, and TJ chose to rely on them (2026-11-05: "We can assume my settings.json will follow me around for now."). It would only have reached cloud sessions and other contributors.
 
 ## Consequences
 
