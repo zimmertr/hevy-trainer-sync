@@ -1,5 +1,6 @@
 import os
 import unittest
+import urllib.error
 from datetime import datetime, timedelta, timezone
 from unittest import mock
 
@@ -100,6 +101,38 @@ class TickTest(unittest.TestCase):
         # The first one went through, so the next poll starts after it and retries the second.
         self.assertEqual(mark, T0 + timedelta(minutes=1))
         self.assertIn("asking hevy2garmin to merge 'Upper' failed", "\n".join(logs.output))
+
+
+    def test_a_network_failure_reading_hevy_keeps_the_mark(self):
+        # What killed the pod on 2026-11-05: the lookup of api.hevyapp.com failed.
+        self.hevy.workout_events.side_effect = urllib.error.URLError(OSError(-2, "Name or service not known"))
+        with self.assertLogs("hevy-trainer-sync.poll", "WARNING") as logs:
+            self.assertEqual(poll.tick(self.hevy, "http://h2g", "s", T0), T0)
+        self.assertIn("reading Hevy workout events failed: <urlopen error", logs.output[0])
+        self.trigger.assert_not_called()
+
+    def test_a_timeout_reading_hevy_keeps_the_mark(self):
+        self.hevy.workout_events.side_effect = TimeoutError("timed out")
+        with self.assertLogs("hevy-trainer-sync.poll", "WARNING"):
+            self.assertEqual(poll.tick(self.hevy, "http://h2g", "s", T0), T0)
+
+    def test_hevy2garmin_unreachable_stops_before_that_workout(self):
+        # The dashboard pod restarting: the connection is refused, not answered.
+        self.hevy.workout_events.return_value = [
+            event(wid="a", updated="2026-11-05T18:01:00Z"),
+            event(wid="b", updated="2026-11-05T18:02:00Z"),
+        ]
+        self.trigger.side_effect = [{"status": "accepted"}, ConnectionRefusedError(111, "Connection refused")]
+        with self.assertLogs("hevy-trainer-sync.poll", "INFO") as logs:
+            mark = poll.tick(self.hevy, "http://h2g", "s", T0)
+        self.assertEqual(mark, T0 + timedelta(minutes=1))
+        self.assertIn("asking hevy2garmin to merge 'Upper' failed", "\n".join(logs.output))
+
+    def test_a_bug_is_not_swallowed(self):
+        # Only call failures keep the loop going; anything else still crashes loudly.
+        self.hevy.workout_events.side_effect = KeyError("events")
+        with self.assertRaises(KeyError):
+            poll.tick(self.hevy, "http://h2g", "s", T0)
 
 
 class MainTest(unittest.TestCase):
