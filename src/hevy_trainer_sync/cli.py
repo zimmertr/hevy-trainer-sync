@@ -68,21 +68,28 @@ def main(argv: list[str] | None = None) -> int:
     folder_id = folder.get("id")
     existing = {r["title"]: r for r in hevy.routines() if r.get("folder_id") == folder_id} if folder_id is not None else {}
 
-    # Every routine this job owns, by title, whether it existed or was just made.
-    managed: dict[str, str] = {title: str(r["id"]) for title, r in existing.items()}
+    # Every routine this job owns, by base title, whether it existed or was just made.
+    week = build.program_week(program.get("created_at"))
+    log.info("program week %s (started %s)", week, program.get("created_at"))
+    managed: dict[str, str] = {}
     changed: list[str] = []
     for t in templates:
-        payload = build.routine_from_template(t, folder_id, weights, NOTES)
-        current = existing.get(payload["title"])
+        base = build.title_from_key(t["key"])
+        payload = build.routine_from_template(t, folder_id, weights, NOTES,
+                                              title_override=build.title(t["key"], week))
+        # Matched by base title, so a routine named for last week is renamed, not duplicated.
+        current = next((r for title, r in existing.items() if build.is_titled_from(title, t["key"])), None)
+        if current:
+            managed[base] = str(current["id"])
         if current and build.normalize(current) == build.normalize(payload):
             log.info("%s: unchanged", payload["title"])
             continue
-        verb = "update" if current else "create"
+        verb = f"update ({current['title']} -> {payload['title']})" if current and current["title"] != payload["title"] else ("update" if current else "create")
         log.info("%s: %s (%d exercises)%s", payload["title"], verb, len(payload["exercises"]), " [dry run]" if args.dry_run else "")
         if args.dry_run:
             continue
         saved = hevy.update_routine(current["id"], payload) if current else hevy.create_routine(payload)
-        managed[payload["title"]] = str(saved["id"])
+        managed[base] = str(saved["id"])
         changed.append(str(saved["id"]))
 
     if args.dry_run:
