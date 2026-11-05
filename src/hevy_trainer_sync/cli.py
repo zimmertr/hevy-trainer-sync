@@ -6,8 +6,10 @@ import os
 import sys
 
 from . import build, db, schedule, state
+from .garmin import Garmin
 from .h2g import Dashboard
 from .hevy_private import Session
+from .http import HttpError
 from .hevy_public import Client
 
 log = logging.getLogger("hevy-trainer-sync")
@@ -21,6 +23,39 @@ def env(name: str, default: str | None = None) -> str:
         log.error("%s is not set", name)
         sys.exit(2)
     return v
+
+
+def send_to_device(database_url: str, dashboard: Dashboard, routine_ids: list[str]) -> int:
+    """Queue each routine's Garmin workout for the watch; it downloads them at its next phone sync."""
+    workouts = db.garmin_workouts(database_url, routine_ids)
+    if not workouts:
+        log.warning("no Garmin workouts recorded for the routines just synced; nothing sent to the watch")
+        return 0
+    garmin = Garmin(db.garmin_di_token(database_url))
+    device = os.environ.get("GARMIN_DEVICE_ID")
+    try:
+        device_id = int(device) if device else garmin.last_used_device_id()
+    except HttpError as e:
+        if e.status != 401:
+            raise
+        # The dashboard's token had expired after all. An empty sync makes it
+        # build its Garmin client, which refreshes and stores the token.
+        log.info("Garmin refused the stored token; asking hevy2garmin to refresh it")
+        dashboard.sync_routines([])
+        garmin = Garmin(db.garmin_di_token(database_url))
+        device_id = int(device) if device else garmin.last_used_device_id()
+    failed = 0
+    for routine_id in routine_ids:
+        if routine_id not in workouts:
+            continue
+        workout_id, title = workouts[routine_id]
+        try:
+            garmin.send_workout(workout_id, title, device_id)
+            log.info("sent %s (Garmin workout %s) to device %s", title, workout_id, device_id)
+        except HttpError as e:
+            failed += 1
+            log.error("send to device failed for %s: %s", title, e)
+    return 1 if failed else 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -108,10 +143,16 @@ def main(argv: list[str] | None = None) -> int:
     else:
         log.info("nothing to push to Garmin")
 
-    # The calendar. Opt-in by giving the job hevy2garmin's database, where the
-    # calendar entry ids live (see db.py).
     database_url = os.environ.get("DATABASE_URL")
-    if not database_url or next_template is None:
+
+    # Send to Device, for every routine that just got a new Garmin workout. The
+    # sync call above made hevy2garmin touch Garmin, so its stored token is fresh.
+    if database_url and to_push and os.environ.get("SEND_TO_DEVICE", "1") == "1":
+        if send_to_device(database_url, dashboard, to_push) != 0:
+            return 1
+
+    # The calendar, opt-in: puts the next workout on today's date (see schedule.py).
+    if not database_url or next_template is None or os.environ.get("SCHEDULE_NEXT", "0") != "1":
         return 0
     next_id = managed.get(build.title_from_key(next_template["key"]))
     if not next_id:
