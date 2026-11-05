@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-11-04
 - Decider: TJ, in the hevy2garmin dashboard's Settings
-- Issues and PRs: none in this repo; KM#1809 deployed the dashboard
+- Issues and PRs: #25 (the Unknown names); KM#1809 deployed the dashboard
 - Cited in code as: none
 - Guide: [`CLAUDE.md`](../../CLAUDE.md), How it fits together, the merge bullet
 
@@ -28,4 +28,4 @@ hevy2garmin's watch strategy is `merge` (Enhance on in Settings) and its sync wi
 
 ## Consequences
 
-Exercise names on Strava stay "Unknown" for merged sets unless the watch recorded them from a planned workout. That gap is why [0002](0002-mirror-trainer-into-routines.md) exists. The setting lives in hevy2garmin's database, not in any manifest, so nothing in git holds it.
+Exercise names on Strava stay "Unknown" for merged sets unless the watch recorded them from a planned workout, which is unverified (#25). That gap is why [0002](0002-mirror-trainer-into-routines.md) exists. The setting lives in hevy2garmin's database, not in any manifest, so nothing in git holds it.

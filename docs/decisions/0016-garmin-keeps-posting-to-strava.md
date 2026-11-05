@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-11-05
 - Decider: TJ ("No, not yet")
-- Issues and PRs: none yet
+- Issues and PRs: #26
 - Cited in code as: none
 - Guide: [`CLAUDE.md`](../../CLAUDE.md), How it fits together, the Strava bullet
 
@@ -25,4 +25,4 @@ Garmin keeps forwarding activities to Strava. This tool does not upload to Strav
 
 ## Consequences
 
-For the first minutes after a session, Strava shows the watch's sets. With a planned workout those carry the exercise names and the planned reps and weights.
+For the first minutes after a session, Strava shows the watch's sets. With a planned workout those carry the planned exercises, reps and weights. #26 holds the decision open until a few sessions show how far off the first post is.
