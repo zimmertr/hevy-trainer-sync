@@ -48,7 +48,15 @@ docker run --rm -v "$PWD":/repo -w /repo python:3.13-slim sh -c '
 
 ## Building the image
 
+<<<<<<< HEAD
 CI builds and pushes every image (record [0005](architectural-decision-records/0005-images-from-ci-prs-only.md)). To check that the Dockerfile builds without pushing anything, run `make build`, and `make scan` to put it through the release's scan.
+=======
+CI builds and pushes every image (record [0005](architectural-decision-records/0005-images-from-ci-prs-only.md)). To check that the Dockerfile builds without pushing anything:
+
+```sh
+docker build -t hevy-trainer-sync:dev .
+```
+>>>>>>> origin/main
 
 ## Running the tool
 
