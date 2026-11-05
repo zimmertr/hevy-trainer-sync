@@ -24,7 +24,7 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0002](0002-mirror-trainer-into-routines.md) | Trainer's program is mirrored into Hevy routines that hevy2garmin carries to the watch | 2026-11-04 | Accepted |
 | [0003](0003-own-repo-and-image.md) | The tool lives in its own repo and ships its own image | 2026-11-04 | Accepted |
 | [0004](0004-public-gpl-3.md) | The repo is public and licensed GPL-3.0 | 2026-11-04 | Accepted |
-| [0005](0005-images-from-ci-prs-only.md) | Images are built only by CI, and main changes only through PRs | 2026-11-04 | Accepted. Tag convention superseded by 0021 |
+| [0005](0005-images-from-ci-prs-only.md) | Images are built only by CI, and main changes only through PRs | 2026-11-04 | Accepted. Tag convention superseded by 0021, approval rule narrowed by 0025 |
 | [0006](0006-session-on-a-volume.md) | The Hevy session is bootstrapped once from the whole cookie and then lives only on a volume | 2026-11-04 | Accepted |
 | [0007](0007-hourly-cronjob.md) | The mirror runs hourly as a Kubernetes CronJob | 2026-11-04 | Accepted |
 | [0008](0008-no-calendar-scheduling.md) | Workouts are not scheduled on the Garmin calendar | 2026-11-04 | Accepted |
@@ -42,4 +42,7 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0020](0020-the-watch-recording-is-what-strava-keeps.md) | Strava keeps what the watch recorded, so the watch's own recording has to be right, and this tool never uploads to Strava | 2026-11-05 | Accepted. Supersedes 0016 |
 | [0021](0021-semver-release-per-merge.md) | Every merge to main cuts a SemVer release, and GitVersion reads the bump from the PR title | 2026-11-05 | Accepted. Supersedes the tag convention of 0005 |
 | [0022](0022-scan-before-production.md) | Production moves only onto a scanned image, and the image takes Debian's fixes at build time | 2026-11-05 | Accepted |
-| [0023](0023-pinned-actions-and-attestations.md) | Every action is pinned to a commit, and the image carries an SBOM and provenance | 2026-11-05 | Accepted |
+| [0023](0023-pinned-actions-and-attestations.md) | Every action is pinned to a commit, and the image carries an SBOM and provenance | 2026-11-05 | Accepted. No-auto-merge consequence superseded by 0025 |
+| [0024](0024-branch-protection.md) | Main is protected the way Bluebird's is, and Copilot reviews every PR | 2026-11-05 | Accepted |
+| [0025](0025-dependabot-with-patch-auto-merge.md) | Dependabot watches pip, Docker and Actions, and patch updates merge themselves | 2026-11-05 | Accepted. Narrows 0005 |
+| [0026](0026-security-scanning.md) | GitHub's security scanning is on, and the released image is re-scanned weekly | 2026-11-05 | Accepted |

@@ -1,0 +1,78 @@
+name: Scheduled Image Scan
+
+# The release scan gates what reaches production, but CVEs are published after
+# an image ships, and the running image rots while nothing rebuilds it. This
+# re-scans the latest released image every week, the way Bluebird does. Two
+# outputs:
+#   - SARIF to the repo's Security tab, as code scanning alerts with history.
+#   - A red run (and GitHub's failure email) only when a fixable Critical or
+#     High exists, so there is something to do.
+# Decision record 0026.
+on:
+  schedule:
+    - cron: '17 14 * * 1'  # Mondays 14:17 UTC, off the top of the hour, when GitHub sheds cron load
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Scan released image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write  # the SARIF upload
+    steps:
+      # Only for trivy.yaml, so this judges the image the way the release
+      # scan did. Without it, a release could pass there and fail here on
+      # findings that gate rules out on purpose.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resolve the latest release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          echo "semver=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "Scanning zimmertr/hevy-trainer-sync:${TAG#v}"
+
+      - name: Scan the image (Trivy)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          # The tag names an index holding the image and its attestations.
+          TRIVY_PLATFORM: linux/amd64
+        with:
+          image-ref: zimmertr/hevy-trainer-sync:${{ steps.release.outputs.semver }}
+          format: sarif
+          output: trivy.sarif
+          ignore-unfixed: true
+          trivy-config: trivy.yaml
+
+      - name: Upload results to the Security tab
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: trivy.sarif
+          category: trivy-released-image
+
+      # The gate reads the same scan as JSON, with the same ignore-unfixed
+      # filtering. trivy is on PATH from the action above.
+      - name: Fail on fixable Critical or High vulnerabilities
+        env:
+          SEMVER: ${{ steps.release.outputs.semver }}
+          TRIVY_PLATFORM: linux/amd64
+        run: |
+          trivy image --format json --output trivy.json --ignore-unfixed \
+            --config trivy.yaml "zimmertr/hevy-trainer-sync:${SEMVER}"
+          # `?` on both levels: a report with no results is the clean case.
+          COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL" or .Severity == "HIGH")] | length' trivy.json)
+          if [ "$COUNT" -gt 0 ]; then
+            trivy convert --format table trivy.json >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::${COUNT} fixable Critical/High vulnerabilities in zimmertr/hevy-trainer-sync:${SEMVER}. Merge the open Dependabot base-image PR, or if there is none, any PR: the next release rebuilds with Debian's current fixes. See docs/CICD.md, The weekly image scan."
+            exit 1
+          fi
+          echo "No fixable Critical/High vulnerabilities in zimmertr/hevy-trainer-sync:${SEMVER}." >> "$GITHUB_STEP_SUMMARY"

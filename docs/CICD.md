@@ -13,6 +13,8 @@ How a change travels from a pull request to the CronJob in the cluster.
 | Docker Hub `zimmertr/hevy-trainer-sync` | Image registry. Tags are release versions, such as `0.1.0`. Builds before 0.1.0 are tagged with their commit SHA |
 | Kubernetes-Manifests `misc/hevy2garmin` | The CronJob, the poller Deployment, the PVC, and the pinned tag in `kustomization.yml`. One `images` entry sets the tag for both |
 | Argo CD application `hevy2garmin` (namespace `argo-system`) | Applies Kubernetes-Manifests main to the cluster |
+| Dependabot | Weekly version PRs for pip, Actions and the base image, plus security updates. Patch updates merge themselves |
+| GitHub code scanning | CodeQL on every PR and push, and the weekly Trivy scan of the released image, in the Security tab |
 
 ## Conventions
 
@@ -70,7 +72,21 @@ A push to main runs `release.yml`, one run at a time (`concurrency: release`). I
    kubectl -n hevy2garmin-system create job --from=cronjob/hevy-trainer-sync hevy-trainer-sync-manual-$(date +%H%M)
    ```
 
-Every action is pinned to a commit SHA. Dependabot proposes new pins weekly as `build(deps):` PRs, which TJ approves like any other. GitVersion's own version, `versionSpec: '6.8.2'`, is not seen by Dependabot and moves by hand.
+Every action is pinned to a commit SHA, and the base image to tag@digest. GitVersion's own version, `versionSpec: '6.8.2'`, is not seen by Dependabot and moves by hand.
+
+## Branch protection
+
+Main takes changes only through a PR, for admins too. Before the merge button works, `test` and `PR Title` must pass and every conversation must be resolved. The branch need not be up to date with main. No approval is required, and no one can force-push or delete main. A ruleset asks Copilot to review every PR, drafts included; resolve or answer its comments like anyone's. The release only pushes tags, which this does not cover. Record: [0024](decisions/0024-branch-protection.md).
+
+## Dependabot
+
+Every Monday Dependabot checks `requirements.txt` and `requirements-dev.txt` (holding back any release younger than seven days), the pinned actions, and the base image digest. It titles each PR `build(deps):` or `build(deps-dev):`, so each one releases a patch. Security updates arrive whenever GitHub publishes an advisory, without the cooldown.
+
+`dependabot-auto-merge.yml` arms squash auto-merge on a **patch-level** version update and comments on the PR to say so. GitHub merges it once the two checks pass and its conversations are resolved, and the merge releases and deploys like any other. A minor, a major, or a digest-only base image update waits for TJ. To stop one, run `gh pr merge --disable-auto` on it, or close it. Record: [0025](decisions/0025-dependabot-with-patch-auto-merge.md).
+
+## The weekly image scan
+
+`image-scan.yml` scans the latest release's image every Monday at 14:17 UTC, and by hand from the Actions tab. It sends the findings to the Security tab under `trivy-released-image`, and the run fails (and GitHub emails) only on a fixable Critical or High. To fix it, merge the waiting Dependabot base-image PR if there is one. If there isn't, any merge will do: the release rebuilds with `apt-get upgrade` and no cache. CodeQL, run by GitHub's default setup, covers the code and the workflows and reports to the same tab. Record: [0026](decisions/0026-security-scanning.md).
 
 On 2026-11-05, before releases, the path from merge to a merged Kubernetes-Manifests PR took about three minutes.
 
@@ -88,7 +104,6 @@ Build & Push fails with "was built from …, not …" when the version's image e
 
 - **Env and secret changes.** The bump touches only the tag. A new variable or secret needs a hand-made Kubernetes-Manifests PR, merged after the release that reads it.
 - **Promote between environments.** There is one environment.
-- **Re-scan between releases.** Only the release scans the image.
 - **Roll back.** Revert the commit here in a PR titled `fix: revert …` (GitHub's own `Revert "…"` title fails the PR Title check) and let the pipeline release the revert, or pin the previous version by hand in Kubernetes-Manifests.
 
 ## Secrets
@@ -97,4 +112,5 @@ Build & Push fails with "was built from …, not …" when the version's image e
 |---|---|---|
 | `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` | This repo's Actions secrets | Build & Push |
 | `GH_PAT` | This repo's Actions secrets | Update Kubernetes Manifests. Needs contents and pull-requests write on Kubernetes-Manifests |
-| `GITHUB_TOKEN` | Given to each run | Determine Version (reads releases), Build & Push (pushes the tag), Create GitHub Release |
+| `GITHUB_TOKEN` | Given to each run | Determine Version (reads releases), Build & Push (pushes the tag), Create GitHub Release, the weekly scan (SARIF upload), the auto-merge comment |
+| `AUTO_MERGE_PAT` | This repo's **Dependabot** secrets | `dependabot-auto-merge.yml`. TJ's personal PAT. A merge made with `GITHUB_TOKEN` would not start `release.yml` |
