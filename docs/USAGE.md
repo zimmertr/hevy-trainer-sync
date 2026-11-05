@@ -7,7 +7,7 @@ Once it is deployed there is nothing to run. This page is what you see, what you
 - **In Hevy**, the folder `Hevy Trainer` holds one routine per Trainer template, named for the program week: `Upper W8`, `Lower W8`. Don't edit them; the next run overwrites them. Don't delete them either: hevy2garmin needs them to keep the watch's copy. Record: [0014](decisions/0014-routines-stay-in-hevy.md).
 - **On the watch**, the same names appear under Workouts after the phone next syncs. Nothing is on the calendar. Record: [0008](decisions/0008-no-calendar-scheduling.md).
 - **To train**, start Trainer's workout in Hevy on the phone, and on the watch start the matching workout from the Workouts list. The watch walks you through the planned exercises and sets. Log the real reps and weights in Hevy as usual.
-- **After you finish**, the watch's activity reaches Garmin and Strava at its next phone sync. hevy2garmin then merges Hevy's sets into it. Until it does, Strava shows the watch's version of the sets. Records: [0001](decisions/0001-merge-into-the-watch-activity.md), [0016](decisions/0016-garmin-keeps-posting-to-strava.md).
+- **After you finish**, the watch's activity reaches Garmin and Strava at its next phone sync. Within a minute of Finish in Hevy, the poller asks hevy2garmin to merge, and the merge lands a few minutes after the watch has synced. Until it does, Strava shows the watch's version of the sets. Let the watch sync within about 25 minutes of finishing; after that hevy2garmin gives up waiting and uploads a second activity. Records: [0001](decisions/0001-merge-into-the-watch-activity.md), [0016](decisions/0016-garmin-keeps-posting-to-strava.md), [0019](decisions/0019-poll-hevy-every-minute.md).
 - **Within the hour**, the routine you just trained is updated with the weights you lifted, and the watch gets the new copy at its next sync.
 - **On Monday**, the routines are renamed for the new week, `W9` and so on, and reach the watch the same way. Record: [0010](decisions/0010-program-week-in-names.md).
 
@@ -22,6 +22,15 @@ kubectl -n hevy2garmin-system logs job/<the latest hevy-trainer-sync job>
 
 A healthy run with nothing to do ends with `nothing to push to Garmin`. A run that changed something ends with `sent ... to device ...` lines.
 
+If Strava still shows the watch's sets half an hour after a session, check the poller and hevy2garmin:
+
+```sh
+kubectl -n hevy2garmin-system logs deploy/hevy-trainer-poll --since=1h
+kubectl -n hevy2garmin-system logs deploy/hevy2garmin --since=1h | grep webhook
+```
+
+The poller logs one `workout '...' saved; hevy2garmin accepted` line per workout. hevy2garmin logs `[webhook] attempt N/10` lines, and `no watch activity on Garmin yet` until the watch has synced.
+
 ## When something breaks
 
 | Log line | Meaning | Fix |
@@ -32,6 +41,8 @@ A healthy run with nothing to do ends with `nothing to push to Garmin`. A run th
 | `HTTP 400 from https://api.hevyapp.com/v1/routines/...` | Hevy rejected a routine payload | File a bug with the log; the payload shape is pinned in `test_build.py` |
 | `hevy2garmin: ... failed=N` | hevy2garmin could not build the Garmin workout | Open the dashboard's Routines page for the error |
 | `send to device failed for ...` | Garmin refused the device message | The workout is still in Garmin Connect; Send to Device there works by hand. File a bug with the log |
+| `reading Hevy workout events failed` (poller) | Hevy's public API is down or the key is wrong | Nothing; the poller retries every minute and catches up |
+| `asking hevy2garmin to merge ... failed` (poller) | The dashboard is down, or `CRON_SECRET` does not match | Check the dashboard pod and the secret. hevy2garmin's own schedule still merges after two hours |
 
 ## Running it by hand
 

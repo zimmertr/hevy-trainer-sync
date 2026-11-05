@@ -10,10 +10,11 @@ class Client:
     def __init__(self, api_key: str):
         self._h = {"api-key": api_key}
 
-    def _pages(self, path: str, key: str, max_pages: int | None = None):
+    def _pages(self, path: str, key: str, max_pages: int | None = None, query: dict | None = None):
         page = 1
         while True:
-            body, _ = request("GET", f"{BASE}{path}", headers=self._h, query={"page": page, "pageSize": PAGE_SIZE})
+            body, _ = request("GET", f"{BASE}{path}", headers=self._h,
+                              query={**(query or {}), "page": page, "pageSize": PAGE_SIZE})
             yield from body.get(key, [])
             if page >= int(body.get("page_count") or 1) or (max_pages and page >= max_pages):
                 return
@@ -40,3 +41,7 @@ class Client:
     def recent_workouts(self, max_pages: int):
         """Newest first."""
         return self._pages("/workouts", "workouts", max_pages=max_pages)
+
+    def workout_events(self, since: str) -> list[dict]:
+        """Every workout `updated` or `deleted` event after `since` (ISO 8601), each carrying the whole workout."""
+        return list(self._pages("/workouts/events", "events", query={"since": since}))

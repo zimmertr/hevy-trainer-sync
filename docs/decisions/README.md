@@ -38,3 +38,4 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0016](0016-garmin-keeps-posting-to-strava.md) | Garmin's own Strava connection stays on | 2026-11-05 | Accepted |
 | [0017](0017-docs-and-records.md) | Docs and decision records are kept the way Bluebird keeps them | 2026-11-05 | Accepted |
 | [0018](0018-full-coverage.md) | Every change ships with tests, and coverage stays at 100% of lines and branches | 2026-11-05 | Accepted |
+| [0019](0019-poll-hevy-every-minute.md) | A poller inside the cluster checks Hevy every 60 seconds and starts hevy2garmin's merge at once | 2026-11-05 | Accepted |

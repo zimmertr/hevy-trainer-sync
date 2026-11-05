@@ -10,7 +10,7 @@ How a change travels from a pull request to the CronJob in the cluster.
 |---|---|
 | GitHub Actions in this repo | Tests every PR, builds and pushes the image on main, opens the Kubernetes-Manifests bump |
 | Docker Hub `zimmertr/hevy-trainer-sync` | Image registry. Tags are full commit SHAs, plus `latest` |
-| Kubernetes-Manifests `misc/hevy2garmin` | The CronJob, the PVC, and the pinned tag in `kustomization.yml` |
+| Kubernetes-Manifests `misc/hevy2garmin` | The CronJob, the poller Deployment, the PVC, and the pinned tag in `kustomization.yml`. One `images` entry sets the tag for both |
 | Argo CD application `hevy2garmin` (namespace `argo-system`) | Applies Kubernetes-Manifests main to the cluster |
 
 ## Flow
@@ -36,7 +36,7 @@ flowchart TD
    kubectl -n argo-system annotate application hevy2garmin argocd.argoproj.io/refresh=normal --overwrite
    ```
 
-5. **The next scheduled run** uses the new image. To run it now:
+5. **The poller** restarts on the new image as soon as Argo CD applies it. **The next scheduled run** of the mirror uses it too. To run the mirror now:
 
    ```sh
    kubectl -n hevy2garmin-system create job --from=cronjob/hevy-trainer-sync hevy-trainer-sync-manual-$(date +%H%M)
