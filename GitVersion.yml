@@ -1,0 +1,31 @@
+workflow: GitHubFlow/v1
+# Mainline alone ignores next-version, so the history before the first tag
+# counted up to 0.0.17. ConfiguredNextVersion makes the first release 0.1.0;
+# once v0.1.0 exists Mainline counts from the tag and this seed stops mattering.
+# Spelled with the tag prefix because GitVersion 6.8.2 parses it against
+# tag-prefix and refuses a bare `0.1.0`. Decision record 0021.
+strategies:
+  - ConfiguredNextVersion
+  - Mainline
+next-version: 'v0.1.0'
+tag-prefix: 'v'
+branches:
+  main:
+    mode: ContinuousDeployment
+# Bluebird's patterns, unchanged (its decision 0080). The squash commit's title
+# is the PR title, so these three read the title and nothing else. Without
+# `(?m)`, `^` is the start of the whole message, which keeps a body line out: a
+# `BREAKING CHANGE:` footer, or a body line that starts `fix!:`, never cuts a
+# major. GitVersion matches without regard to case, so `Fix!:` is a major too.
+#
+# The scope is `[^)\r\n]+` rather than `.+` because `.+` runs past the scope's
+# own `)`, which reads `fix(poll): explain feat(api)!: titles` as a major.
+# `build` is listed for Dependabot's `build(deps):` titles. A title no pattern
+# matches still releases a patch through the branch's default increment, but
+# the PR Title check refuses it, so every prefix in use must be named here.
+#
+# That check, .github/scripts/check_pr_title.py, reads these three lines and
+# fails a PR whose title none of them matches. Keep each pattern on one line.
+major-version-bump-message: '^(feat|fix|perf|refactor|chore|docs|style|test|ci|build)(\([^)\r\n]+\))?!:'
+minor-version-bump-message: '^feat(\([^)\r\n]+\))?:'
+patch-version-bump-message: '^(fix|perf|refactor|chore|docs|style|test|ci|build)(\([^)\r\n]+\))?:'
