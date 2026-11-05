@@ -7,6 +7,19 @@ here. Its routine routes are session-gated, hence the login first.
 from .http import request
 
 
+def trigger_merge(base_url: str, cron_secret: str) -> dict:
+    """Start hevy2garmin's merge-first sync, the one its Hevy webhook route runs.
+
+    The route answers at once and works in the background: a few merge-only
+    attempts while the watch's activity reaches Garmin, then a fresh upload if
+    it never does. It reads nothing from the body, and it takes CRON_SECRET
+    rather than a session.
+    """
+    body, _ = request("POST", f"{base_url.rstrip('/')}/api/cron/webhook",
+                      headers={"Authorization": f"Bearer {cron_secret}"}, body={})
+    return body if isinstance(body, dict) else {}
+
+
 class Dashboard:
     def __init__(self, base_url: str, password: str):
         self._base = base_url.rstrip("/")

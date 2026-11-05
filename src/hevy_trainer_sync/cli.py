@@ -59,6 +59,11 @@ def send_to_device(database_url: str, dashboard: Dashboard, routine_ids: list[st
 
 
 def main(argv: list[str] | None = None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
+    # `poll` is the long-running watcher (poll.py); everything else is one mirror run.
+    if argv[:1] == ["poll"]:
+        from . import poll
+        return poll.main(argv[1:])
     ap = argparse.ArgumentParser(prog="hevy-trainer-sync")
     ap.add_argument("--dry-run", action="store_true", help="read everything, write nothing (tokens are still refreshed)")
     ap.add_argument("--force", action="store_true", help="trigger the hevy2garmin sync even when no routine changed")
