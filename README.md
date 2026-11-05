@@ -50,7 +50,7 @@ Flags: `--dry-run` reads everything and writes nothing to Hevy or hevy2garmin (t
 
 ## Running
 
-I run it as a Kubernetes CronJob next to hevy2garmin; the manifests are in my [kubernetes-manifests](https://github.com/zimmertr/kubernetes-manifests) repo under `misc/hevy2garmin`. CI builds the image on every merge to main and bumps the tag there.
+I run it as a Kubernetes CronJob next to hevy2garmin; the manifests are in my [kubernetes-manifests](https://github.com/zimmertr/kubernetes-manifests) repo under `misc/hevy2garmin`. CI cuts a release on every merge to main, versioned from the PR title with GitVersion, and bumps the tag there.
 
 CI runs the tests, with 100% line and branch coverage required. Anything local runs in Docker:
 
