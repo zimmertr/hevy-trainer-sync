@@ -40,7 +40,7 @@ Every decision gets a record in the same PR that makes it, and the rule below th
 
 ## Tests
 
-Every change ships with tests. Coverage stays at 100% of lines and branches, and CI fails below it. Tests use `unittest` and `unittest.mock`, and never touch the network or a database. Record: [0018](docs/architectural-decision-records/0018-full-coverage.md)
+Every change ships with tests. Coverage aims at 100% of lines and branches without being held to it: CI reports it, every gap gets a test or a written reason, and no test exists only to reach a line. Tests use `unittest` and `unittest.mock`, and never touch the network or a database. Record: [0032](docs/architectural-decision-records/0032-coverage-aims-at-100.md)
 
 CI runs the tests. Commit early, push, open a draft PR and read the `test` job. Run anything locally only when CI cannot answer the question, and then in Docker, never on the host. The commands are in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
 
@@ -49,7 +49,7 @@ CI runs the tests. Commit early, push, open a draft PR and read the `test` job. 
 File issues with the `create-issue` skill: the two-sentence summary, the six sections, the hemingway and humanizer passes, one priority, one type, the area labels and the session label. Record: [0013](docs/architectural-decision-records/0013-bluebird-issue-flow.md) The skill is shared across TJ's repos and lives in [zimmertr/ai-config](https://github.com/zimmertr/ai-config), linked into `~/.claude/skills`; it reads the four things below from this section. Record: [0027](docs/architectural-decision-records/0027-shared-create-issue-skill.md)
 
 - **The reader**: someone who lifts and wears the watch, and does not read code.
-- **The gates**: the tests pass in CI at 100% line and branch coverage; the README's table of variables and "What it does not do" match the behaviour; the `docs/` page that owns the topic changes in the same PR; a change to env vars, secrets or the schedule ships with a Kubernetes-Manifests PR for `misc/hevy2garmin`.
+- **The gates**: the tests pass in CI, and any new coverage gap has a test or a written reason; the README's table of variables and "What it does not do" match the behaviour; the `docs/` page that owns the topic changes in the same PR; a change to env vars, secrets or the schedule ships with a Kubernetes-Manifests PR for `misc/hevy2garmin`.
 - **The constraints**: the Hevy session on the volume is the only valid copy, so never refresh it from a second process; everything Garmin goes through hevy2garmin, never a second Garmin login; `--dry-run` must stay write-free; the private Hevy endpoint is undocumented, so log what you depend on.
 - **The areas**: `hevy` (the private program endpoint, the public API, the session), `garmin` (Garmin Connect, device messages, the watch), `hevy2garmin` (the dashboard and its database), `ci`, `kubernetes`, `ux`, `security`.
 

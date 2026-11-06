@@ -37,7 +37,7 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0015](0015-nothing-upstream-yet.md) | Nothing goes upstream to hevy2garmin until this tool has been polished and tested | 2026-11-05 | Accepted |
 | [0016](0016-garmin-keeps-posting-to-strava.md) | Garmin's own Strava connection stays on | 2026-11-05 | Superseded by 0020 |
 | [0017](0017-docs-and-records.md) | Docs and decision records are kept the way Bluebird keeps them | 2026-11-05 | Accepted |
-| [0018](0018-full-coverage.md) | Every change ships with tests, and coverage stays at 100% of lines and branches | 2026-11-05 | Accepted |
+| [0018](0018-full-coverage.md) | Every change ships with tests, and coverage stays at 100% of lines and branches | 2026-11-05 | Superseded by 0032 |
 | [0019](0019-poll-hevy-every-minute.md) | A poller inside the cluster checks Hevy every 60 seconds and starts hevy2garmin's merge at once | 2026-11-05 | Accepted |
 | [0020](0020-the-watch-recording-is-what-strava-keeps.md) | Strava keeps what the watch recorded, so the watch's own recording has to be right, and this tool never uploads to Strava | 2026-11-05 | Accepted. Supersedes 0016 |
 | [0021](0021-semver-release-per-merge.md) | Every merge to main cuts a SemVer release, and GitVersion reads the bump from the PR title | 2026-11-05 | Accepted. Supersedes the tag convention of 0005 |
@@ -51,3 +51,4 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0029](0029-repo-files-and-make-targets.md) | The repo carries CONTRIBUTING, NOTICES and a Makefile whose targets mirror CI, each in Docker | 2026-11-05 | Accepted |
 | [0030](0030-pr-lint-and-image-checks.md) | Every PR is linted, and builds, scans and smoke-tests the image it would ship | 2026-11-05 | Accepted |
 | [0031](0031-immutable-image-tags.md) | Image tags on Docker Hub are immutable | 2026-11-05 | Accepted |
+| [0032](0032-coverage-aims-at-100.md) | Coverage aims at 100% and is reported on every PR, without a floor | 2026-11-05 | Accepted |
