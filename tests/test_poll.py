@@ -131,6 +131,44 @@ class ReadHevyTest(PollerCase):
             self.assertEqual(self.poller.since, T0)
 
 
+class StartMirrorTest(PollerCase):
+    def setUp(self):
+        super().setUp()
+        self.kube = self.patch(poll, "kube")
+        self.kube.run_cronjob.return_value = "hevy-trainer-sync-save-abc"
+        self.poller.started = T0 + timedelta(hours=1)
+        self.poller.run_cronjob = "hevy-trainer-sync"
+
+    def test_a_save_after_start_runs_the_mirror_once_per_poll(self):
+        self.hevy.workout_events.return_value = [event(wid="a"), event(wid="b", updated="2026-11-06T19:02:00Z")]
+        with self.assertLogs("hevy-trainer-sync.poll", "INFO") as logs:
+            self.poller.read_hevy()
+        self.kube.run_cronjob.assert_called_once_with("hevy-trainer-sync")
+        self.assertIn("started hevy-trainer-sync-save-abc to update the routines and the calendar",
+                      "\n".join(logs.output))
+
+    def test_saves_read_back_on_start_do_not(self):
+        self.hevy.workout_events.return_value = [event(updated="2026-11-06T18:59:00Z")]
+        with self.assertLogs("hevy-trainer-sync.poll", "INFO"):
+            self.poller.read_hevy()
+        self.kube.run_cronjob.assert_not_called()
+
+    def test_off_without_a_cronjob(self):
+        self.poller.run_cronjob = None
+        self.hevy.workout_events.return_value = [event()]
+        with self.assertLogs("hevy-trainer-sync.poll", "INFO"):
+            self.poller.read_hevy()
+        self.kube.run_cronjob.assert_not_called()
+
+    def test_a_failure_waits_for_the_hourly_run(self):
+        self.kube.run_cronjob.side_effect = HttpError(403, "forbidden", "u")
+        self.hevy.workout_events.return_value = [event()]
+        with self.assertLogs("hevy-trainer-sync.poll", "INFO") as logs:
+            self.poller.read_hevy()
+        self.assertIn("starting hevy-trainer-sync failed, the hourly run will catch up", "\n".join(logs.output))
+        self.assertIn("w1", self.poller.waiting)
+
+
 class TickTest(PollerCase):
     def test_nothing_waiting_touches_nothing_else(self):
         self.poller.tick(T0)
@@ -289,7 +327,13 @@ class MainTest(unittest.TestCase):
         self.assertEqual((poller.h2g_url, poller.cron_secret, poller.database_url, poller.password),
                          ("http://hevy2garmin", "s", "postgres://db", "pw"))
         self.assertEqual(poller.since, T0 - poll.GIVE_UP)
+        self.assertEqual(poller.started, T0)
+        self.assertIsNone(poller.run_cronjob)
         self.assertEqual(sleep.call_args_list, [mock.call(30)] * 2)
+
+    def test_run_cronjob_names_the_mirror(self):
+        _, _, tick, _ = self.run_main({**self.ENV, "RUN_CRONJOB": "hevy-trainer-sync"}, ticks=1)
+        self.assertEqual(tick.call_args.args[0].run_cronjob, "hevy-trainer-sync")
 
     def test_defaults(self):
         _, _, tick, sleep = self.run_main(self.ENV, ticks=1)

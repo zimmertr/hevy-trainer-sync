@@ -65,3 +65,18 @@ class SaveTest(unittest.TestCase):
             self.assertEqual(stat.S_IMODE(os.stat(path).st_mode), 0o600)
             self.assertEqual(state.load(path), {"access_token": "A", "refresh_token": "R"})
             self.assertEqual([n for n in os.listdir(d) if n.startswith(".tokens-")], [])
+
+
+class LockedTest(unittest.TestCase):
+    def test_a_second_holder_waits_until_the_first_is_done(self):
+        import fcntl
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "sub", "hevy-session.json")
+            with state.locked(path):
+                with open(f"{path}.lock", "w") as other:
+                    with self.assertRaises(BlockingIOError):
+                        fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            with open(f"{path}.lock", "w") as other:
+                fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)

@@ -1,3 +1,4 @@
+import contextlib
 import os
 import runpy
 import unittest
@@ -71,6 +72,7 @@ class MainTest(unittest.TestCase):
         self.schedules = self._patch(cli.db, "schedules", return_value=[])
         self.today_in = self._patch(cli.schedule, "today_in", return_value=TODAY)
         self._patch(cli.logging, "basicConfig")
+        self.locked = self._patch(cli.state, "locked", side_effect=lambda path: contextlib.nullcontext())
 
     def _patch(self, target, attr, **kw):
         p = mock.patch.object(target, attr, **kw)
@@ -111,6 +113,10 @@ class MainTest(unittest.TestCase):
         self.assertIs(tokens, TOKENS)
         persist({"access_token": "A2"})
         self.save.assert_called_once_with("/state/hevy-session.json", {"access_token": "A2"})
+
+    def test_the_whole_run_holds_the_lock_beside_the_state_file(self):
+        self.run_main("--dry-run")
+        self.locked.assert_called_once_with("/state/s.json")
 
     def test_existing_state_is_not_reported_as_bootstrapped(self):
         _, logs = self.run_main("--dry-run")
