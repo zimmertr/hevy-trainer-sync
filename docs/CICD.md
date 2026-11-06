@@ -10,7 +10,7 @@ How a change travels from a pull request to the CronJob in the cluster.
 |---|---|
 | GitHub Actions in this repo | Tests every PR and checks its title. On main, cuts a release and opens the Kubernetes-Manifests bump |
 | GitHub releases and tags | One `v<version>` tag and one immutable release per merge, with notes from the PR titles |
-| Docker Hub `zimmertr/hevy-trainer-sync` | Image registry. Tags are release versions, such as `0.1.0`. Builds before 0.1.0 are tagged with their commit SHA |
+| Docker Hub `zimmertr/hevy-trainer-sync` | Image registry. Tags are release versions, such as `0.1.0`. Builds before 0.1.0 are tagged with their commit SHA. Tags are immutable (rule `.*`): a pushed tag can't be overwritten or deleted. Record: [0031](architectural-decision-records/0031-immutable-image-tags.md) |
 | Kubernetes-Manifests `misc/hevy2garmin` | The CronJob, the poller Deployment, the PVC, and the pinned tag in `kustomization.yml`. One `images` entry sets the tag for both |
 | Argo CD application `hevy2garmin` (namespace `argo-system`) | Applies Kubernetes-Manifests main to the cluster |
 | Dependabot | Weekly version PRs for pip, Actions and the base image, plus security updates. Patch updates merge themselves |
@@ -99,7 +99,7 @@ A fixable Critical or High in the pushed image fails **Scan Pushed Image**. Prod
 
 Rerun the failed jobs from the run's page. Each job makes only what is missing, so a rerun after a failed tag push pushes the tag, and a rerun after a failed release makes the release.
 
-Build & Push fails with "was built from …, not …" when the version's image exists but came from another commit. Mainline gives every commit its own version, so this is not a rerun. Do not delete the image. Find which run pushed it, and merge a new PR so the next release gets a new version.
+Build & Push fails with "was built from …, not …" when the version's image exists but came from another commit. Mainline gives every commit its own version, so this is not a rerun. Docker Hub refuses to overwrite or delete the tag anyway. Find which run pushed it, and merge a new PR so the next release gets a new version.
 
 ## What the pipeline does not do
 
