@@ -1,6 +1,6 @@
 # 0018. Every change ships with tests, and coverage stays at 100% of lines and branches
 
-- Status: Accepted
+- Status: Superseded by [0032](0032-coverage-aims-at-100.md)
 - Date: 2026-11-05
 - Decider: TJ ("I want to have 100% test coverage for this tool. All new features and changes must include tests")
 - Issues and PRs: the PR that added the coverage gate

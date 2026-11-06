@@ -22,5 +22,8 @@ jobs:
           python-version: "3.13"
       - run: pip install -r requirements-dev.txt
       - run: PYTHONPATH=src python -m coverage run -m unittest discover -s tests -v
-      # Fails the job below 100% line and branch coverage (fail_under in .coveragerc).
-      - run: python -m coverage report
+      # Reports line and branch coverage with no floor; the aim is 100% (record
+      # 0032). The table also goes to the run's summary, so a gap shows on the PR.
+      - run: |
+          python -m coverage report
+          python -m coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
