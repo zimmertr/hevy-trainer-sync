@@ -41,7 +41,7 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0019](0019-poll-hevy-every-minute.md) | A poller inside the cluster checks Hevy every 60 seconds and starts hevy2garmin's merge at once | 2026-11-05 | Accepted |
 | [0020](0020-the-watch-recording-is-what-strava-keeps.md) | Strava keeps what the watch recorded, so the watch's own recording has to be right, and this tool never uploads to Strava | 2026-11-05 | Accepted. Supersedes 0016 |
 | [0021](0021-semver-release-per-merge.md) | Every merge to main cuts a SemVer release, and GitVersion reads the bump from the PR title | 2026-11-05 | Accepted. Supersedes the tag convention of 0005 |
-| [0022](0022-scan-before-production.md) | Production moves only onto a scanned image, and the image takes Debian's fixes at build time | 2026-11-05 | Accepted |
+| [0022](0022-scan-before-production.md) | Production moves only onto a scanned image, and the image takes Debian's fixes at build time | 2026-11-05 | Accepted; amended by 0034 |
 | [0023](0023-pinned-actions-and-attestations.md) | Every action is pinned to a commit, and the image carries an SBOM and provenance | 2026-11-05 | Accepted. No-auto-merge consequence superseded by 0025 |
 | [0024](0024-branch-protection.md) | Main is protected the way Bluebird's is, with Bluebird's Copilot review ruleset | 2026-11-05 | Accepted; ruleset removed by 0033 |
 | [0025](0025-dependabot-with-patch-auto-merge.md) | Dependabot watches pip, Docker and Actions, and patch updates merge themselves | 2026-11-05 | Accepted. Narrows 0005 |
@@ -53,3 +53,6 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0031](0031-immutable-image-tags.md) | Image tags on Docker Hub are immutable | 2026-11-05 | Accepted |
 | [0032](0032-coverage-aims-at-100.md) | Coverage aims at 100% and is reported on every PR, without a floor | 2026-11-05 | Accepted |
 | [0033](0033-no-copilot-review-ruleset.md) | There is no Copilot review ruleset | 2026-11-05 | Accepted |
+| [0034](0034-upgrade-after-a-per-build-argument.md) | The apt upgrade layer sits after a build argument that changes on every build | 2026-11-05 | Accepted |
+| [0035](0035-a-polite-client.md) | Every call names this tool, and a 429 is waited out once | 2026-11-05 | Accepted |
+| [0036](0036-hashed-locks.md) | The image installs a hashed lock compiled from its direct pins | 2026-11-05 | Accepted |

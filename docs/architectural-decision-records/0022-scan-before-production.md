@@ -1,6 +1,6 @@
 # 0022. Production moves only onto a scanned image, and the image takes Debian's fixes at build time
 
-- Status: Accepted
+- Status: Accepted; where the upgrade layer sits is amended by [0034](0034-upgrade-after-a-per-build-argument.md)
 - Date: 2026-11-05
 - Decider: TJ (chose "Trivy scan of pushed image" from Bluebird's release hardening)
 - Issues and PRs: #32

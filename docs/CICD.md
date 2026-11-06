@@ -49,7 +49,7 @@ flowchart TD
 
 Every PR runs three workflows, and all four of their jobs are required checks:
 
-- **test** (`test.yml`): Python 3.13, `pip install -r requirements-dev.txt`, the unittest suite under `coverage`, and `coverage report` across the package and `.github/scripts`, in the log and in the run's summary. It has no floor; the aim is 100%. Record: [0032](architectural-decision-records/0032-coverage-aims-at-100.md).
+- **test** (`test.yml`): Python 3.13, `pip install --require-hashes -r requirements-dev.txt`, the unittest suite under `coverage`, and `coverage report` across the package and `.github/scripts`, in the log and in the run's summary. It has no floor; the aim is 100%. Record: [0032](architectural-decision-records/0032-coverage-aims-at-100.md).
 - **PR Title** (`pr-title.yml`): runs `.github/scripts/check_pr_title.py`, which reads the three patterns from `GitVersion.yml` and fails a title none of them reads. It says on the PR which bump the merge will release, and warns on a major. It reruns when the title is edited.
 - **Lint** and **Docker Build** (`pr.yml`). `Lint` runs ruff 0.16.0 under `ruff.toml`, Bluebird's rule set. `Docker Build` lints the `Dockerfile` with hadolint, builds the `linux/amd64` image without pushing it, and scans it with Trivy under `trivy.yaml`. It posts the result as one comment that each push rewrites (not on Dependabot's PRs, whose token can't comment), and fails on a fixable Critical or High, as the release would. A smoke test then runs the image: `--help` answers, psycopg loads on the image's Python, the zoneinfo data is there, and it runs as UID 1000. Record: [0030](architectural-decision-records/0030-pr-lint-and-image-checks.md).
 
@@ -81,7 +81,7 @@ Main takes changes only through a PR, for admins too. Before the merge button wo
 
 ## Dependabot
 
-Every Monday Dependabot checks `requirements.txt` and `requirements-dev.txt` (holding back any release younger than seven days), the pinned actions, and the base image digest. It titles each PR `build(deps):` or `build(deps-dev):`, so each one releases a patch. Security updates arrive whenever GitHub publishes an advisory, without the cooldown.
+Every Monday Dependabot checks `requirements.in` and `requirements-dev.in`, recompiling their hashed locks (holding back any release younger than seven days; record [0036](architectural-decision-records/0036-hashed-locks.md)), the pinned actions, and the base image digest. It titles each PR `build(deps):` or `build(deps-dev):`, so each one releases a patch. Security updates arrive whenever GitHub publishes an advisory, without the cooldown.
 
 `dependabot-auto-merge.yml` arms squash auto-merge on a **patch-level** version update and comments on the PR to say so. GitHub merges it once the two checks pass and its conversations are resolved, and the merge releases and deploys like any other. A minor, a major, or a digest-only base image update waits for TJ. To stop one, run `gh pr merge --disable-auto` on it, or close it. Record: [0025](architectural-decision-records/0025-dependabot-with-patch-auto-merge.md).
 
@@ -93,7 +93,7 @@ On 2026-11-05, before releases, the path from merge to a merged Kubernetes-Manif
 
 ## The release scan
 
-A fixable Critical or High in the pushed image fails **Scan Pushed Image**. Production stays on the previous release and no GitHub release is made, but the image and the git tag stay published. The job's summary has the table. The fix is the next release: usually a rebuild is enough, because the Dockerfile runs `apt-get upgrade` and CI builds without a cache, so merge any PR (a `chore:` will do) once Debian or PyPI has the fix. A Python package with a fix needs its pin moved in `requirements.txt`.
+A fixable Critical or High in the pushed image fails **Scan Pushed Image**. Production stays on the previous release and no GitHub release is made, but the image and the git tag stay published. The job's summary has the table. The fix is the next release: usually a rebuild is enough, because the Dockerfile runs `apt-get upgrade` after `APP_COMMIT`, which every commit changes, so merge any PR (a `chore:` will do) once Debian or PyPI has the fix. Record: [0034](architectural-decision-records/0034-upgrade-after-a-per-build-argument.md). A Python package with a fix needs its pin moved in `requirements.in`, then `make lock`.
 
 ## Finishing a failed release
 

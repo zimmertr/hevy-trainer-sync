@@ -5,7 +5,8 @@ version: 2
 # (dependabot-auto-merge.yml); everything else waits for review. Decision
 # records 0023 and 0025.
 updates:
-  # requirements.txt and requirements-dev.txt. Seven days after a release
+  # requirements.in and requirements-dev.in, whose hashed locks Dependabot
+  # recompiles with pip-compile (decision record 0036). Seven days after a release
   # before proposing it: a patch merges itself and a merge deploys, so without
   # the wait a release published the day before the weekly run would be live
   # that morning. Security updates do not wait; GitHub documents cooldown as

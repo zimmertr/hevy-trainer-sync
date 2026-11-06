@@ -145,6 +145,9 @@ jobs:
           # The version only. No `latest`: Kubernetes-Manifests pins the
           # version, and a moving tag is one nothing should pull.
           tags: zimmertr/hevy-trainer-sync:${{ needs.determine-version.outputs.semVer }}
+          # Changes on every build, so the apt upgrade layer always reruns
+          # (Dockerfile, decision record 0034).
+          build-args: APP_COMMIT=${{ github.sha }}
           # The revision label is what the re-run check above reads.
           labels: |
             org.opencontainers.image.version=${{ needs.determine-version.outputs.semVer }}

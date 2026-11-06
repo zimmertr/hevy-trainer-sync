@@ -10,6 +10,15 @@ What each source can and cannot tell this tool, and every quirk found so far. Ea
 | hevy2garmin Postgres | Its source | CNPG `uri` | Garmin workout ids and Garmin's token, read-only |
 | Garmin Connect, `connectapi.garmin.com` | No | Bearer DI token borrowed from hevy2garmin, Android app headers | Last-used device, Send to Device |
 
+## Terms and limits
+
+What each provider says about how it may be called, read on 2026-11-05.
+
+- **Hevy public API:** no published rate limit. The docs ask that a job updating hourly or daily not send its requests exactly at xx:00 but at a random minute instead, and warn the API may change or be abandoned. The CronJob runs at minute 7. The poller reads the events once a minute, which that request, about hourly and daily jobs, doesn't speak to. Hevy Pro only.
+- **Hevy private API:** undocumented, so no published terms or limits. Used for two calls a run, as the web app makes them.
+- **Garmin Connect:** undocumented, with no published terms for this API. Called only after a routine changed.
+- **hevy2garmin:** TJ's own deployment. Its webhook route throttles past `WEBHOOK_MAX_INFLIGHT` (see below).
+
 ## Hevy Trainer program (private)
 
 `GET /hevy_trainer/v3/program?client_program_updated_at=1970-01-01T00:00:00.000Z&client_next_workout_updated_at=1970-01-01T00:00:00.000Z`, as catalogued by [hevy-mcp-unofficial](https://github.com/LovelessCodes/hevy-mcp-unofficial).
