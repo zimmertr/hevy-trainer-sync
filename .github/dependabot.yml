@@ -24,12 +24,17 @@ updates:
 
   # Every action is pinned to a commit SHA with its version in a comment.
   # Dependabot reads the comment, proposes the next release, and rewrites the
-  # SHA and the comment together, so a pin moves only by PR.
+  # SHA and the comment together, so a pin moves only by PR. Daily, with each
+  # release three days old before it is proposed: yggdrasil's modules are
+  # pinned here too, and every yggdrasil release bakes three days before its
+  # consumers take it (yggdrasil's record 0023).
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: daily
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 3
     commit-message:
       prefix: build
       include: scope

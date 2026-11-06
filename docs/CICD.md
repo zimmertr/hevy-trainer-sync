@@ -13,7 +13,7 @@ How a change travels from a pull request to the CronJob in the cluster.
 | Docker Hub `zimmertr/hevy-trainer-sync` | Image registry. Tags are release versions, such as `0.1.0`. Builds before 0.1.0 are tagged with their commit SHA. Tags are immutable (rule `.*`): a pushed tag can't be overwritten or deleted. Record: [0031](architectural-decision-records/0031-immutable-image-tags.md) |
 | Kubernetes-Manifests `misc/hevy2garmin` | The CronJob, the poller Deployment, the PVC, and the pinned tag in `kustomization.yml`. One `images` entry sets the tag for both |
 | Argo CD application `hevy2garmin` (namespace `argo-system`) | Applies Kubernetes-Manifests main to the cluster |
-| Dependabot | Weekly version PRs for pip, Actions and the base image, plus security updates. Patch and minor updates merge themselves |
+| Dependabot | Weekly version PRs for pip and the base image, daily ones for Actions, plus security updates. Patch and minor updates merge themselves |
 | GitHub code scanning | CodeQL on every PR and push, and the weekly Trivy scan of the released image, in the Security tab |
 
 ## Conventions
@@ -50,8 +50,8 @@ flowchart TD
 Every PR runs three workflows, and all four of their jobs are required checks:
 
 - **test** (`test.yml`): Python 3.13, `pip install --require-hashes -r requirements-dev.txt`, the unittest suite under `coverage`, and `coverage report` across the package and `.github/scripts`, in the log and in the run's summary. It has no floor; the aim is 100%. Record: [0032](architectural-decision-records/0032-coverage-aims-at-100.md).
-- **PR Title** (`pr-title.yml`): runs `.github/scripts/check_pr_title.py`, which reads the three patterns from `GitVersion.yml` and fails a title none of them reads. It says on the PR which bump the merge will release, and warns on a major. It reruns when the title is edited.
-- **Lint** and **Docker Build** (`pr.yml`). `Lint` runs ruff 0.16.0 under `ruff.toml`, Bluebird's rule set. `Docker Build` lints the `Dockerfile` with hadolint, builds the `linux/amd64` image without pushing it, and scans it with Trivy under `trivy.yaml`. It posts the result as one comment that each push rewrites (not on Dependabot's PRs, whose token can't comment), and fails on a fixable Critical or High, as the release would. A smoke test then runs the image: `--help` answers, psycopg loads on the image's Python, the zoneinfo data is there, and it runs as UID 1000. Record: [0030](architectural-decision-records/0030-pr-lint-and-image-checks.md).
+- **PR Title / PR Title** (`pr-title.yml`): yggdrasil's `pr-title` module, which fails a title whose type isn't one of the types in `GitVersion.yml`. It reruns when the title is edited. Record: [0038](architectural-decision-records/0038-ci-runs-on-yggdrasils-modules.md).
+- **Lint** and **Docker Build / Docker Build** (`pr.yml`). `Lint` runs ruff 0.16.0 under `ruff.toml`, Bluebird's rule set. `Docker Build` is yggdrasil's `docker-build` module. It lints the `Dockerfile` with hadolint, builds the `linux/amd64` image without pushing it, and scans it with Trivy under `trivy.yaml`. It posts the table as one comment that each push rewrites (not on Dependabot's PRs, whose token can't comment). Then `.github/scripts/smoke_test.sh` runs the image: `--help` answers, psycopg loads on the image's Python, the zoneinfo data is there, and it runs as UID 1000. Last, it fails on a fixable Critical or High, as the release would. Records: [0030](architectural-decision-records/0030-pr-lint-and-image-checks.md), [0038](architectural-decision-records/0038-ci-runs-on-yggdrasils-modules.md).
 
 A push to main runs `release.yml`, one run at a time (`concurrency: release`). It also runs by hand from the Actions tab, from main only.
 
@@ -77,11 +77,11 @@ Every action is pinned to a commit SHA, and the base image to tag@digest. GitVer
 
 ## Branch protection
 
-Main takes changes only through a PR, for admins too. Before the merge button works, `test`, `PR Title`, `Lint` and `Docker Build` must pass and every conversation must be resolved. The branch need not be up to date with main. No approval is required, and no one can force-push or delete main. The release only pushes tags, which this does not cover. Records: [0024](architectural-decision-records/0024-branch-protection.md), [0030](architectural-decision-records/0030-pr-lint-and-image-checks.md), [0033](architectural-decision-records/0033-no-copilot-review-ruleset.md).
+Main takes changes only through a PR, for admins too. Before the merge button works, `test`, `PR Title / PR Title`, `Lint` and `Docker Build / Docker Build` must pass and every conversation must be resolved. The branch need not be up to date with main. No approval is required, and no one can force-push or delete main. The release only pushes tags, which this does not cover. Records: [0024](architectural-decision-records/0024-branch-protection.md), [0030](architectural-decision-records/0030-pr-lint-and-image-checks.md), [0033](architectural-decision-records/0033-no-copilot-review-ruleset.md).
 
 ## Dependabot
 
-Every Monday Dependabot checks `requirements.in` and `requirements-dev.in`, recompiling their hashed locks (holding back any release younger than seven days; record [0036](architectural-decision-records/0036-hashed-locks.md)), the pinned actions, and the base image digest. It titles each PR `build(deps):` or `build(deps-dev):`, so each one releases a patch. Security updates arrive whenever GitHub publishes an advisory, without the cooldown.
+Every Monday Dependabot checks `requirements.in` and `requirements-dev.in`, recompiling their hashed locks (holding back any release younger than seven days; record [0036](architectural-decision-records/0036-hashed-locks.md)), and the base image digest. It checks the pinned actions and yggdrasil modules daily, holding back any release younger than three days (record [0038](architectural-decision-records/0038-ci-runs-on-yggdrasils-modules.md)). It titles each PR `build(deps):` or `build(deps-dev):`, so each one releases a patch. Security updates arrive whenever GitHub publishes an advisory, without the cooldown.
 
 `dependabot-auto-merge.yml` arms squash auto-merge on a **patch or minor** version update and comments on the PR to say so. GitHub merges it once the two checks pass and its conversations are resolved, and the merge releases and deploys like any other. A major or a digest-only base image update waits for TJ. Dependabot reads a calendar-versioned package's year change, such as tzdata 2025.2 to 2026.6, as a major. To stop one, run `gh pr merge --disable-auto` on it, or close it. Records: [0025](architectural-decision-records/0025-dependabot-with-patch-auto-merge.md), [0037](architectural-decision-records/0037-minor-updates-merge-themselves.md).
 
