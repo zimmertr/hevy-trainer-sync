@@ -1,6 +1,6 @@
 # The image's direct pins. `make lock` compiles requirements.txt from this
 # file, with a hash for every package. Decision record 0036.
 # Only for reading hevy2garmin's routine_schedules table; everything else is stdlib.
-psycopg[binary]==3.2.9
+psycopg[binary]==3.3.6
 # python:slim ships no zoneinfo database; TZ needs one.
 tzdata==2025.2
