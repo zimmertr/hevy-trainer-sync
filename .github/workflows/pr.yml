@@ -48,4 +48,11 @@ jobs:
     with:
       # As the release passes it: the apt upgrade layer reruns per push.
       build-args: APP_COMMIT=${{ github.event.pull_request.head.sha }}
-      smoke-test: .github/scripts/smoke_test.sh
+      # What only a built image shows: the entry point starts, the dependencies
+      # load on the image's own Python (a new Python minor can ship before a
+      # wheel for it does), the zoneinfo data is there for TZ, and it runs as
+      # the unprivileged user the manifests expect.
+      smoke-test: |
+        docker run --rm "$IMAGE" --help
+        docker run --rm --entrypoint python3 "$IMAGE" -c 'import psycopg, zoneinfo; zoneinfo.ZoneInfo("America/Los_Angeles")'
+        test "$(docker run --rm --entrypoint id "$IMAGE" -u)" = 1000

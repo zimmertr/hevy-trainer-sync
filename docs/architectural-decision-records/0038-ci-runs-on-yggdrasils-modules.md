@@ -14,7 +14,7 @@ This repo's workflows were the source most of zimmertr/yggdrasil's modules were 
 ## Decision
 
 - The PR title check, the PR image check, the Dependabot auto-merge, the weekly image scan and the release call yggdrasil's modules (`pr-title`, `docker-build`, `auto-merge`, `image-scan`, `release`), each pinned to a yggdrasil release's commit SHA with the version in a comment.
-- What is this repo's own stays here: `test`, `Lint`, the smoke test (`.github/scripts/smoke_test.sh`), and the inputs and secrets each module takes.
+- What is this repo's own stays here: `test`, `Lint`, the smoke test (three commands in `pr.yml`), and the inputs and secrets each module takes.
 - Dependabot checks the pinned actions daily, and proposes a release only once it is three days old, as yggdrasil's record 0023 asks of every consumer.
 - The switch is three PRs: PR checks, then auto-merge and the weekly scan, then the release.
 
