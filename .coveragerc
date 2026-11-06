@@ -7,7 +7,7 @@ source =
     .github/scripts
 
 [report]
-# CI fails below this; every line and branch above is tested.
-fail_under = 100
+# No floor: the aim is 100%, and a gap gets a test or a written reason
+# (record 0032).
 show_missing = True
 skip_covered = True

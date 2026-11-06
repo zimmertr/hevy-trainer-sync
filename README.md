@@ -52,7 +52,7 @@ Flags: `--dry-run` reads everything and writes nothing to Hevy or hevy2garmin (t
 
 I run it as a Kubernetes CronJob next to hevy2garmin; the manifests are in my [kubernetes-manifests](https://github.com/zimmertr/kubernetes-manifests) repo under `misc/hevy2garmin`. CI cuts a release on every merge to main, versioned from the PR title with GitVersion, and bumps the tag there.
 
-CI runs the tests, with 100% line and branch coverage required. Anything local runs in Docker:
+CI runs the tests and reports line and branch coverage. Anything local runs in Docker:
 
 ```sh
 docker run --rm -v "$PWD":/repo -w /repo python:3.13-slim sh -c 'pip install -q -r requirements-dev.txt && PYTHONPATH=src python -m coverage run -m unittest discover -s tests && python -m coverage report'

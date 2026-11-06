@@ -11,8 +11,8 @@ RUN          := docker run --rm -v "$(CURDIR)":/repo -w /repo
 
 .PHONY: test test-one lint lint-docker build scan
 
-# The suite under coverage, failing below 100% of lines and branches, as the
-# test job does.
+# The suite under coverage, with its line and branch report, as the test job
+# runs it.
 test:
 	$(RUN) $(PYTHON_IMAGE) sh -c 'pip install -q -r requirements-dev.txt && \
 	  PYTHONPATH=src python -m coverage run -m unittest discover -s tests && \
