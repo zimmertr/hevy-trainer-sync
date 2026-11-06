@@ -57,3 +57,4 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0035](0035-a-polite-client.md) | Every call names this tool, and a 429 is waited out once | 2026-11-05 | Accepted |
 | [0036](0036-hashed-locks.md) | The image installs a hashed lock compiled from its direct pins | 2026-11-05 | Accepted |
 | [0037](0037-minor-updates-merge-themselves.md) | Dependabot's minor updates merge themselves too | 2026-11-05 | Accepted. Amends 0025 |
+| [0038](0038-ci-runs-on-yggdrasils-modules.md) | CI runs on yggdrasil's shared modules, pinned to a release commit | 2026-11-05 | Accepted |

@@ -1,7 +1,7 @@
 [run]
 branch = True
-# The release pipeline's two scripts are held to the same bar as the package:
-# one decides the version that ships, the other the tag production runs.
+# The release pipeline's script is held to the same bar as the package: it
+# decides the tag production runs.
 source =
     src/hevy_trainer_sync
     .github/scripts

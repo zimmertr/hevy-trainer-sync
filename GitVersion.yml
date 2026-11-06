@@ -22,10 +22,8 @@ branches:
 # own `)`, which reads `fix(poll): explain feat(api)!: titles` as a major.
 # `build` is listed for Dependabot's `build(deps):` titles. A title no pattern
 # matches still releases a patch through the branch's default increment, but
-# the PR Title check refuses it, so every prefix in use must be named here.
-#
-# That check, .github/scripts/check_pr_title.py, reads these three lines and
-# fails a PR whose title none of them matches. Keep each pattern on one line.
+# the PR Title check refuses it. That check is yggdrasil's pr-title module,
+# which allows exactly these types.
 major-version-bump-message: '^(feat|fix|perf|refactor|chore|docs|style|test|ci|build)(\([^)\r\n]+\))?!:'
 minor-version-bump-message: '^feat(\([^)\r\n]+\))?:'
 patch-version-bump-message: '^(fix|perf|refactor|chore|docs|style|test|ci|build)(\([^)\r\n]+\))?:'
