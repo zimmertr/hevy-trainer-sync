@@ -8,7 +8,7 @@ Once it is deployed there is nothing to run. This page is what you see, what you
 - **On the watch**, the same names appear under Workouts after the phone next syncs. Nothing is on the calendar. Record: [0008](architectural-decision-records/0008-no-calendar-scheduling.md).
 - **To train**, start Trainer's workout in Hevy on the phone, and on the watch start the matching workout from the Workouts list. The watch walks you through the planned exercises and sets. Log the real reps and weights in Hevy as usual.
 - **During the session**, what the watch records is what Strava keeps, forever. Follow the planned sets, and if you change a weight or do different reps, enter it on the watch as well as in Hevy. Record: [0020](architectural-decision-records/0020-the-watch-recording-is-what-strava-keeps.md).
-- **After you finish**, the watch's activity reaches Garmin and Strava at its next phone sync. Within a minute of Finish in Hevy, the poller asks hevy2garmin to merge, and Garmin Connect has Hevy's sets a few minutes after the watch has synced. Strava does not change. Let the watch sync within about 25 minutes of finishing; after that hevy2garmin gives up waiting and uploads a second activity. Records: [0001](architectural-decision-records/0001-merge-into-the-watch-activity.md), [0019](architectural-decision-records/0019-poll-hevy-every-minute.md).
+- **After you finish**, there is nothing to do. The watch's activity reaches Garmin and Strava at its next phone sync, however late that is. The poller waits for it, then has hevy2garmin merge Hevy's sets into it, so Garmin Connect has them within a minute or two. Strava does not change, and nothing else is ever posted. A session the watch didn't record stays in Hevy only. Don't press Sync Now on the dashboard: it would upload that session, or one the watch hasn't synced yet, as a second activity. Records: [0001](architectural-decision-records/0001-merge-into-the-watch-activity.md), [0039](architectural-decision-records/0039-merge-only-after-the-watch-activity.md).
 - **Within the hour**, the routine you just trained is updated with the weights you lifted, and the watch gets the new copy at its next sync.
 - **On Monday**, the routines are renamed for the new week, `W9` and so on, and reach the watch the same way. Record: [0010](architectural-decision-records/0010-program-week-in-names.md).
 
@@ -23,14 +23,14 @@ kubectl -n hevy2garmin-system logs job/<the latest hevy-trainer-sync job>
 
 A healthy run with nothing to do ends with `nothing to push to Garmin`. A run that changed something ends with `sent ... to device ...` lines.
 
-If Garmin Connect still shows the watch's sets half an hour after a session, check the poller and hevy2garmin:
+If Garmin Connect still shows the watch's sets a few minutes after the watch has synced, check the poller and hevy2garmin:
 
 ```sh
 kubectl -n hevy2garmin-system logs deploy/hevy-trainer-poll --since=1h
 kubectl -n hevy2garmin-system logs deploy/hevy2garmin --since=1h | grep webhook
 ```
 
-The poller logs one `workout '...' saved; hevy2garmin accepted` line per workout. hevy2garmin logs `[webhook] attempt N/10` lines, and `no watch activity on Garmin yet` until the watch has synced.
+For each workout the poller logs `saved; waiting for the watch's activity on Garmin`, then `watch activity N found for ...; hevy2garmin accepted` once the watch has synced, then `is on Garmin; done`. hevy2garmin logs `[webhook] attempt 1/10: synced`.
 
 ## When something breaks
 
@@ -43,7 +43,9 @@ The poller logs one `workout '...' saved; hevy2garmin accepted` line per workout
 | `hevy2garmin: ... failed=N` | hevy2garmin could not build the Garmin workout | Open the dashboard's Routines page for the error |
 | `send to device failed for ...` | Garmin refused the device message | The workout is still in Garmin Connect; Send to Device there works by hand. File a bug with the log |
 | `reading Hevy workout events failed` (poller) | Hevy's public API is down, the key is wrong, or the cluster could not reach it (`<urlopen error ...>`) | Nothing; the poller retries every minute and catches up |
-| `asking hevy2garmin to merge ... failed` (poller) | The dashboard is down, or `CRON_SECRET` does not match | Check the dashboard pod and the secret. hevy2garmin's own schedule still merges after two hours |
+| `checking the waiting workouts failed` (poller) | The database, Garmin or the dashboard did not answer, or `CRON_SECRET` does not match | Nothing, if it clears; the poller tries again every minute. If it repeats, check the dashboard pod, its database and the secret |
+| `no watch activity turned up for ... in 2 days, 0:00:00` (poller) | The watch didn't record the session, or never synced it | Nothing. The session stays in Hevy only |
+| `hevy2garmin's merge is off or not set to merge` (poller) | The dashboard's Settings page has merge off, or a watch strategy other than Merge | Turn merge on with the Merge strategy. Until then nothing is merged, so nothing is duplicated |
 
 ## Running it by hand
 

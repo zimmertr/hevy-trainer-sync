@@ -79,7 +79,7 @@ def new_workouts(events: list[dict], since: datetime) -> list[Workout]:
             continue
         try:
             updated, start, end = parse(w["updated_at"]), parse(w["start_time"]), parse(w["end_time"])
-        except (KeyError, TypeError, ValueError):
+        except (KeyError, AttributeError, ValueError):
             continue
         if updated > since:
             found.append(Workout(str(w["id"]), str(w.get("title") or ""), updated, start, end))

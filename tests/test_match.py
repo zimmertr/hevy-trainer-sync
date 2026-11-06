@@ -85,7 +85,8 @@ class FindTest(unittest.TestCase):
 
     def test_settings_widen_the_rules(self):
         wide = match.Settings(activity_types=("hiit",), overlap=0.4, max_drift_minutes=40)
-        self.assertIsNotNone(match.find(START, END, [act(kind="hiit", start="2026-11-06 18:30:00", minutes=30)], wide, NOW))
+        hiit = act(kind="hiit", start="2026-11-06 18:30:00", minutes=30)
+        self.assertIsNotNone(match.find(START, END, [hiit], wide, NOW))
 
 
 if __name__ == "__main__":

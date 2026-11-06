@@ -26,7 +26,7 @@ Every decision gets a record in the same PR that makes it, and the rule below th
 - It runs hourly as CronJob `hevy-trainer-sync`, one run at a time. Record: [0007](docs/architectural-decision-records/0007-hourly-cronjob.md)
 - The routines stay in Hevy; hevy2garmin is keyed on their ids. Record: [0014](docs/architectural-decision-records/0014-routines-stay-in-hevy.md)
 - Strava keeps exactly what the watch recorded; the merge never reaches it. So the planned workout on the watch must carry the right exercises, sets, rep targets and weights. Garmin's own Strava connection stays on, and this tool never uploads to Strava. Record: [0020](docs/architectural-decision-records/0020-the-watch-recording-is-what-strava-keeps.md)
-- `poll` reads Hevy's workout events every 60 seconds from inside the cluster and calls hevy2garmin's webhook route for each new workout, so Garmin Connect has the merge within minutes. Nothing is exposed, and the poller never touches the Hevy session. Record: [0019](docs/architectural-decision-records/0019-poll-hevy-every-minute.md)
+- `poll` reads Hevy's workout events every 60 seconds from inside the cluster and holds each new workout until Garmin has the watch's activity for it, matched by hevy2garmin's own rules (`match.py`). Only then does it call hevy2garmin's webhook route, and only for the newest waiting workout, so the route merges and never uploads. A workout the watch never recorded stays in Hevy only. `hevy2garmin-sync` is suspended. Nothing is exposed, and the poller never touches the Hevy session. Record: [0039](docs/architectural-decision-records/0039-merge-only-after-the-watch-activity.md)
 
 ## Rules
 

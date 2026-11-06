@@ -11,7 +11,7 @@ This job closes the gap. Every run it:
 3. Tells your hevy2garmin dashboard to push the routines that changed to Garmin.
 4. Sends each new Garmin workout to the watch, the way Garmin Connect's Send to Device button does. hevy2garmin recreates the Garmin workout whenever a routine changes, and the new copy isn't on the watch until something sends it. The watch downloads it at its next phone sync. This uses the Garmin session hevy2garmin holds, read from its Postgres, so Garmin never sees a second login.
 
-It has a second mode, `poll`, for the other direction. hevy2garmin holds a finished workout for two hours before merging it into Garmin Connect. `poll` reads Hevy's workout events every minute and calls hevy2garmin's webhook route as soon as one shows up, the same call Hevy's own webhook would make, so Garmin Connect has the real sets a few minutes after the watch syncs. Strava never sees the merge, so the plan on the watch is still what makes Strava right. It runs inside the cluster, so nothing has to be reachable from the internet, and it never touches the Hevy session.
+It has a second mode, `poll`, for the other direction. hevy2garmin holds a finished workout for two hours before merging it into Garmin Connect, and if the watch's activity still isn't there, it uploads one of its own, which Garmin then posts to Strava as a duplicate. `poll` reads Hevy's workout events every minute, waits until Garmin has the watch's activity for the workout, and only then calls hevy2garmin's webhook route, the same call Hevy's own webhook would make. hevy2garmin merges into the watch's activity on its first try, so Garmin Connect has the real sets a minute or two after the watch syncs, and nothing but the watch ever reaches Strava. A session the watch didn't record stays in Hevy. Strava never sees the merge, so the plan on the watch is still what makes Strava right. It runs inside the cluster, so nothing has to be reachable from the internet, and it never touches the Hevy session. I suspend hevy2garmin's own scheduled sync, since it's the thing that uploads.
 
 Optionally (`SCHEDULE_NEXT=1`) it also puts Trainer's next workout on today's date in the Garmin calendar. Off by default: it means a planned-workout entry on every day until you train.
 
@@ -22,7 +22,7 @@ Hevy's private API is undocumented and can change without notice. The public API
 ## Requirements
 
 - Hevy Pro, for the API key at https://hevy.com/settings?developer.
-- A hevy2garmin dashboard with Garmin connected, reachable from wherever this runs. For `poll`, its `CRON_SECRET` too.
+- A hevy2garmin dashboard with Garmin connected, reachable from wherever this runs. For `poll`, its `CRON_SECRET` and its Postgres too.
 - The `auth2.0-token` cookie from a logged-in hevy.com tab. Open DevTools, Application, Cookies, and copy the value as it is; URL-encoded is fine. Both tokens in it are needed, because Hevy's refresh endpoint wants the old access token alongside the refresh token. It is only used once: the refresh token rotates on every refresh, so after the first run the state file is the only valid copy.
 
 ## Configuration
@@ -35,10 +35,10 @@ Everything is environment variables.
 | `HEVY_SESSION` | | The `auth2.0-token` cookie value, read only when the state file is missing |
 | `HEVY_STATE_FILE` | `/state/hevy-session.json` | Where the rotating session tokens live. Must persist between runs. |
 | `H2G_URL` | `http://hevy2garmin` | hevy2garmin dashboard |
-| `H2G_PASSWORD` | | Its login password |
+| `H2G_PASSWORD` | | Its login password. `poll` uses it only to have the Garmin session refreshed |
 | `FOLDER_TITLE` | `Hevy Trainer` | Routine folder to manage |
 | `WORKOUT_PAGES` | `4` | How many pages of ten workouts to scan for last weights |
-| `DATABASE_URL` | | hevy2garmin's Postgres, read-only: the Garmin workout ids and session for Send to Device, and calendar entry ids. Unset disables both steps. |
+| `DATABASE_URL` | | hevy2garmin's Postgres, read-only: the Garmin workout ids and session for Send to Device, and calendar entry ids. Unset disables both steps. `poll` needs it for the Garmin session, the merge settings and which workouts are done. |
 | `SEND_TO_DEVICE` | `1` | Send each new Garmin workout to the watch |
 | `GARMIN_DEVICE_ID` | last used | Which Garmin device to send to |
 | `SCHEDULE_NEXT` | `0` | Also put the next workout on today's Garmin calendar |
