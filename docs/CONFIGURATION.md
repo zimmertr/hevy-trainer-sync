@@ -20,12 +20,13 @@ Everything is environment variables and two flags. There is no config file. The 
 | `TZ` | `UTC` | | `schedule.today_in` | Which day "today" is for the calendar. The cluster sets `America/Los_Angeles` |
 | `CRON_SECRET` | | `poll` only | `poll.main` | hevy2garmin's cron secret, sent as a bearer to its webhook route |
 | `POLL_SECONDS` | `60` | | `poll.main` | How often `poll` reads Hevy's workout events |
+| `RUN_CRONJOB` | | | `poll.main` | A CronJob in the poller's namespace to run whenever a workout is saved. Unset, `poll` starts nothing. Record: [0041](architectural-decision-records/0041-run-the-mirror-after-each-save.md) |
 
 An empty string counts as unset. A required variable that is missing exits with status 2 and names it.
 
 ## Modes and flags
 
-`python -m hevy_trainer_sync` runs the mirror once. `python -m hevy_trainer_sync poll` runs the poller until stopped; it reads only `HEVY_API_KEY`, `H2G_URL`, `H2G_PASSWORD`, `DATABASE_URL`, `CRON_SECRET` and `POLL_SECONDS`, and takes no flags. How long it waits for the watch (48 hours) and how long before it asks hevy2garmin again (30 minutes) are constants in `poll.py`. The mirror's flags:
+`python -m hevy_trainer_sync` runs the mirror once. `python -m hevy_trainer_sync poll` runs the poller until stopped; it reads only `HEVY_API_KEY`, `H2G_URL`, `H2G_PASSWORD`, `DATABASE_URL`, `CRON_SECRET`, `POLL_SECONDS` and `RUN_CRONJOB`, and takes no flags. How long it waits for the watch (48 hours) and how long before it asks hevy2garmin again (30 minutes) are constants in `poll.py`. The mirror's flags:
 
 | Flag | Effect |
 |---|---|
@@ -59,6 +60,7 @@ Everything else takes its default.
 | `H2G_PASSWORD` | Secret `hevy2garmin`, key `password` |
 | `DATABASE_URL` | Secret `hevy2garmin-database-app`, key `uri` |
 | `CRON_SECRET` | Secret `hevy2garmin`, key `cron-secret` |
+| `RUN_CRONJOB` | `hevy-trainer-sync`, with service account `hevy-trainer-poll` (`trainer-poll-rbac.yml`), which may only get that CronJob and create Jobs |
 
 hevy2garmin's own Deployment sets `WEBHOOK_DELAY_SECONDS=0`, `WEBHOOK_RETRY_INTERVAL_SECONDS=180` and `WEBHOOK_MAX_ATTEMPTS=10`. The poller calls the route only once the watch's activity is on Garmin, so the first attempt, at once, merges. The `hevy2garmin-sync` CronJob is suspended. Record: [0039](architectural-decision-records/0039-merge-only-after-the-watch-activity.md).
 

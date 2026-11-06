@@ -4,6 +4,8 @@ Losing the newest refresh token means logging in again by hand, so the file is
 written the moment a refresh succeeds, before the new access token is used.
 """
 
+import contextlib
+import fcntl
 import json
 import os
 import tempfile
@@ -75,3 +77,19 @@ def save(path: str, tokens: dict) -> None:
         json.dump(tokens, f)
     os.chmod(tmp, 0o600)
     os.replace(tmp, path)
+
+
+@contextlib.contextmanager
+def locked(path: str):
+    """Hold an exclusive lock beside the state file for the whole run.
+
+    The poller starts a run whenever a workout is saved, and the hourly
+    schedule starts its own, so two runs can overlap. Two processes refreshing
+    the session would each rotate the refresh token and leave the other's
+    copy dead. The second run waits here until the first is done; the Job's
+    deadline bounds the wait. Decision record 0041.
+    """
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    with open(f"{path}.lock", "w") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        yield

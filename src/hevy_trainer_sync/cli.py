@@ -73,6 +73,12 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
     state_file = env("HEVY_STATE_FILE", "/state/hevy-session.json")
+    # One run at a time on the session, however the run was started.
+    with state.locked(state_file):
+        return run(args, state_file)
+
+
+def run(args: argparse.Namespace, state_file: str) -> int:
     # First run: the hevy.com cookie, pasted whole, saved to the state file at
     # once. After this the file is the only valid copy, because the refresh
     # token rotates.

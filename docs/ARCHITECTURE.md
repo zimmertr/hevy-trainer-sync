@@ -42,7 +42,7 @@ Garmin forwards the watch's activity to Strava before the merge can run, and Str
 `python -m hevy_trainer_sync poll` (`poll.main()`) builds one `poll.Poller` and calls `tick()` every `POLL_SECONDS`:
 
 1. `hevy_public.Client.workout_events()` reads every event since the high-water mark, which starts 48 hours (`poll.GIVE_UP`) before the process did, so a restart forgets nothing it was waiting on.
-2. `poll.new_workouts()` keeps the `updated` events whose `updated_at` is after the mark. Each one joins `Poller.waiting`, and the mark moves past it.
+2. `poll.new_workouts()` keeps the `updated` events whose `updated_at` is after the mark. Each one joins `Poller.waiting`, and the mark moves past it. If any was saved after the poller started and `RUN_CRONJOB` is set, `kube.run_cronjob()` creates one Job from that CronJob, so the mirror updates the routines and the calendar at once. Record: [0041](architectural-decision-records/0041-run-the-mirror-after-each-save.md).
 3. `Poller.settle()` drops the waiting workouts that `db.synced_ids()` says hevy2garmin has finished, and gives up, with a warning, on any that ended more than 48 hours ago. Those stay in Hevy only.
 4. It takes the newest waiting workout and nothing else. hevy2garmin's webhook route takes no workout id and syncs the newest workout it has not finished, so asking while a newer one waits would sync that one instead.
 5. It reads the dashboard's `merge_settings` (`db.merge_settings()`, parsed by `match.settings()`). If merge is off or the watch strategy is not `merge`, it logs an error and asks nothing, because hevy2garmin would upload.
@@ -57,6 +57,7 @@ It needs the public API key, the cron secret, the database and the dashboard pas
 
 `cli.main()` does these in order. Each step logs one line, and any failure exits non-zero.
 
+0. **Lock.** `state.locked()` holds an exclusive lock on `HEVY_STATE_FILE.lock` for the whole run, so a run the poller started and an hourly one never touch the session together. Record: [0041](architectural-decision-records/0041-run-the-mirror-after-each-save.md).
 1. **Session.** `state.load_or_bootstrap()` reads `HEVY_STATE_FILE`, or on the first run parses `HEVY_SESSION` and saves it at once. `hevy_private.Session` refreshes the access token when Hevy answers 401 and rewrites the file through its `persist` callback. Record: [0006](architectural-decision-records/0006-session-on-a-volume.md).
 2. **Program.** `Session.get_program()` calls `GET /hevy_trainer/v3/program`. Templates are sorted by `index`, and `next_workout_index` names the next one.
 3. **Weights.** `hevy_public.Client.recent_workouts()` reads the last `WORKOUT_PAGES` pages of workouts, and `build.last_weights()` keeps the last working-set weight per exercise.
@@ -75,7 +76,8 @@ It needs the public API key, the cron secret, the database and the dashboard pas
 | `cli.py` | The run above, and dispatch of `poll` | Orchestrates the rest |
 | `poll.py` | The poller loop, the event filter, the waiting workouts | Hevy public API, hevy2garmin, its Postgres, Garmin Connect |
 | `match.py` | hevy2garmin's merge settings and its rules for matching a workout to a watch activity | None |
-| `state.py` | Bootstrap from the cookie, atomic save with mode 0600 | The state file |
+| `state.py` | Bootstrap from the cookie, atomic save with mode 0600, the run lock | The state file |
+| `kube.py` | One Job from a CronJob, as the pod's service account | Kubernetes API |
 | `hevy_private.py` | Session refresh and the Trainer program | Hevy private API |
 | `hevy_public.py` | Folders, routines, recent workouts | Hevy public API |
 | `h2g.py` | Dashboard login, routine sync, schedule and unschedule, and `trigger_merge` | hevy2garmin HTTP |
@@ -94,7 +96,8 @@ It runs in TJ's cluster next to hevy2garmin, in namespace `hevy2garmin-system`, 
 | Object | What |
 |---|---|
 | CronJob `hevy-trainer-sync` | `7 * * * *`, `concurrencyPolicy: Forbid`, `backoffLimit: 0`, 600 s deadline, UID 1000, read-only root filesystem. Record: [0007](architectural-decision-records/0007-hourly-cronjob.md) |
-| Deployment `hevy-trainer-poll` | One replica, `Recreate`, args `poll`, same image, no volume, UID 1000, read-only root filesystem |
+| Deployment `hevy-trainer-poll` | One replica, `Recreate`, args `poll`, same image, no volume, UID 1000, read-only root filesystem, service account `hevy-trainer-poll` |
+| Role `hevy-trainer-poll` | Get CronJob `hevy-trainer-sync`, create Jobs. Record: [0041](architectural-decision-records/0041-run-the-mirror-after-each-save.md) |
 | CronJob `hevy2garmin-sync` | hevy2garmin's scheduled sync. Suspended, because it uploads any workout still unsynced two hours after it ends. Record: [0039](architectural-decision-records/0039-merge-only-after-the-watch-activity.md) |
 | PVC `hevy-trainer-sync-state` | 1 Gi on `proxmox-flashpool`, mounted at `/state`. Holds `hevy-session.json` and nothing else |
 | Secret `hevy2garmin` | Keys `hevy-api-key`, `password`, `cron-secret` (the poller), and `hevy-session` (only needed until the first run) |

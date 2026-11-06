@@ -60,3 +60,4 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0038](0038-ci-runs-on-yggdrasils-modules.md) | CI runs on yggdrasil's shared modules, pinned to a release commit | 2026-11-05 | Accepted |
 | [0039](0039-merge-only-after-the-watch-activity.md) | The poller asks hevy2garmin to merge only once the watch's activity is on Garmin, and nothing is ever uploaded | 2026-11-06 | Accepted. Supersedes 0019 |
 | [0040](0040-the-calendar-carries-workouts-to-the-watch.md) | Workouts reach the watch through the Garmin calendar, one planned entry at a time, and Send to Device is off | 2026-11-06 | Accepted. Supersedes 0008 |
+| [0041](0041-run-the-mirror-after-each-save.md) | The poller runs the mirror as soon as a workout is saved, and runs take a lock on the session | 2026-11-06 | Accepted. Amends 0007 |

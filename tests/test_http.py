@@ -42,6 +42,12 @@ class RequestTest(unittest.TestCase):
         self.assertEqual(req.get_header("Content-type"), "application/json")
         self.assertEqual(urlopen.call_args.kwargs, {"timeout": 300})
 
+    def test_a_tls_context_is_passed_through(self):
+        ctx = object()
+        with mock.patch("urllib.request.urlopen", return_value=response(b"")) as urlopen:
+            http.request("GET", "https://kubernetes.default.svc/x", context=ctx)
+        self.assertEqual(urlopen.call_args.kwargs, {"timeout": 30, "context": ctx})
+
     def test_empty_response_is_none(self):
         with mock.patch("urllib.request.urlopen", return_value=response(b"")):
             body, headers = http.request("POST", "https://h/p", body=[])

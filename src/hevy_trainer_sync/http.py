@@ -2,6 +2,7 @@
 
 import email.utils
 import json
+import ssl
 import time
 import urllib.error
 import urllib.parse
@@ -44,9 +45,13 @@ def retry_after_s(value: str | None, *, now=lambda: datetime.now(UTC)) -> float 
     return max(0.0, (when - now()).total_seconds())
 
 
-def _send(req: urllib.request.Request, url: str, timeout: int) -> tuple[dict | list | None, dict]:
+def _send(req: urllib.request.Request, url: str, timeout: int,
+          context: ssl.SSLContext | None = None) -> tuple[dict | list | None, dict]:
+    kwargs: dict = {"timeout": timeout}
+    if context is not None:
+        kwargs["context"] = context
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as res:
+        with urllib.request.urlopen(req, **kwargs) as res:
             raw = res.read()
             return (json.loads(raw) if raw else None), dict(res.headers)
     except urllib.error.HTTPError as e:
@@ -54,10 +59,12 @@ def _send(req: urllib.request.Request, url: str, timeout: int) -> tuple[dict | l
 
 
 def request(method: str, url: str, *, headers: dict | None = None, query: dict | None = None,
-            body: dict | list | None = None, timeout: int = 30, sleep=time.sleep) -> tuple[dict | list | None, dict]:
+            body: dict | list | None = None, timeout: int = 30, sleep=time.sleep,
+            context: ssl.SSLContext | None = None) -> tuple[dict | list | None, dict]:
     """Return (decoded JSON or None, response headers). Raises HttpError on 4xx/5xx.
 
-    `sleep` exists for the tests.
+    `context` verifies a server the system trust store doesn't know, which is
+    only the Kubernetes API (kube.py). `sleep` exists for the tests.
     """
     if query:
         url = f"{url}?{urllib.parse.urlencode(query)}"
@@ -68,11 +75,11 @@ def request(method: str, url: str, *, headers: dict | None = None, query: dict |
         hdrs["Content-Type"] = "application/json"
     req = urllib.request.Request(url, data=data, method=method, headers=hdrs)
     try:
-        return _send(req, url, timeout)
+        return _send(req, url, timeout, context)
     except HttpError as e:
         given = {k.lower(): v for k, v in e.headers.items()}.get("retry-after")
         wait = retry_after_s(given) if e.status == 429 else None
         if wait is None or wait > MAX_RETRY_AFTER_S:
             raise
         sleep(wait)
-        return _send(req, url, timeout)
+        return _send(req, url, timeout, context)

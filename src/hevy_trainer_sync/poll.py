@@ -12,6 +12,10 @@ does it call the webhook route, whose first attempt then merges. A workout the
 watch never recorded is never sent, so nothing but the watch ever reaches
 Strava. Decision record 0039.
 
+With RUN_CRONJOB set it also starts a run of that CronJob, the hourly mirror,
+whenever a workout is saved, so the weights and the next workout reach the
+calendar within minutes instead of at the next hour (decision record 0041).
+
 It needs no Hevy session and no volume, so it never touches the rotating token
 the hourly mirror owns. Garmin is read with hevy2garmin's token, borrowed from
 its database the way Send to Device does (decision record 0009).
@@ -24,7 +28,7 @@ import time
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from . import db, match
+from . import db, kube, match
 from .garmin import Garmin
 from .h2g import Dashboard, trigger_merge
 from .hevy_public import Client
@@ -88,8 +92,12 @@ def new_workouts(events: list[dict], since: datetime) -> list[Workout]:
 
 class Poller:
     def __init__(self, hevy: Client, h2g_url: str, cron_secret: str, database_url: str, password: str,
-                 since: datetime):
+                 since: datetime, started: datetime | None = None, run_cronjob: str | None = None):
         self.hevy = hevy
+        # Saves after this start a mirror run. The 48 hours read back on start
+        # are already in Hevy's program and the routines.
+        self.started = started or since
+        self.run_cronjob = run_cronjob
         self.h2g_url = h2g_url
         self.cron_secret = cron_secret
         self.database_url = database_url
@@ -112,7 +120,9 @@ class Poller:
         except FAILED as e:
             log.warning("reading Hevy workout events failed: %s", e)
             return
+        fresh = False
         for w in new_workouts(events, self.since):
+            fresh = fresh or w.updated > self.started
             old = self.waiting.get(w.id)
             if old is None:
                 log.info("workout %r (%s) saved; waiting for the watch's activity on Garmin", w.title, w.id)
@@ -120,6 +130,17 @@ class Poller:
                 w.asked = old.asked
             self.waiting[w.id] = w
             self.since = max(self.since, w.updated)
+        if fresh and self.run_cronjob:
+            self.start_mirror()
+
+    def start_mirror(self) -> None:
+        """One run of the mirror now. A failure only means waiting for the hourly run."""
+        try:
+            job = kube.run_cronjob(self.run_cronjob)
+        except FAILED as e:
+            log.warning("starting %s failed, the hourly run will catch up: %s", self.run_cronjob, e)
+            return
+        log.info("started %s to update the routines and the calendar", job)
 
     def settle(self, now: datetime) -> None:
         for wid in db.synced_ids(self.database_url, list(self.waiting)):
@@ -192,6 +213,8 @@ def main(argv: list[str] | None = None, *, sleep=time.sleep, now=lambda: datetim
         # workout still waiting. Ones hevy2garmin already has drop out on the
         # first poll.
         now() - GIVE_UP,
+        started=now(),
+        run_cronjob=os.environ.get("RUN_CRONJOB") or None,
     )
     interval = int(env("POLL_SECONDS", "60"))
     log.info("polling Hevy every %ss for saved workouts", interval)
