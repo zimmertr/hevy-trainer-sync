@@ -333,7 +333,7 @@ class MainTest(unittest.TestCase):
         self.assertIn("WARNING:hevy-trainer-sync:next workout 'Upper' has no routine yet; nothing scheduled", logs)
         self.schedules.assert_not_called()
 
-    def test_next_workout_goes_on_today_and_a_missed_one_comes_off(self):
+    def test_next_workout_goes_on_today_and_every_other_entry_comes_off(self):
         self.existing_upper_and_lower()
         self.schedules.return_value = [("u", "s1", "2026-11-04"), ("l", "s0", "2026-11-03")]
         self.dash.unschedule.return_value = {"ok": True}
@@ -342,7 +342,7 @@ class MainTest(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.today_in.assert_called_once_with("America/Los_Angeles")
         self.schedules.assert_called_once_with(DB, ["u", "l"])
-        self.dash.unschedule.assert_called_once_with("u", "s1")
+        self.assertEqual(self.dash.unschedule.call_args_list, [mock.call("u", "s1"), mock.call("l", "s0")])
         self.assertIn("unscheduled stale entry s1: ok", logs)
         self.dash.schedule.assert_called_once_with("u", TODAY)
         self.assertIn(f"scheduled Upper on {TODAY}: ok", logs)
@@ -370,14 +370,25 @@ class MainTest(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn(f"scheduled Upper on {TODAY}: no workout", logs)
 
-    def test_a_workout_already_on_today_is_left_alone(self):
+    def test_the_next_workout_already_on_today_is_left_alone(self):
         self.existing_upper_and_lower()
-        self.schedules.return_value = [("l", "s2", TODAY)]
+        self.schedules.return_value = [("u", "s2", TODAY)]
         rc, logs = self.run_main(DATABASE_URL=DB, SCHEDULE_NEXT="1")
         self.assertEqual(rc, 0)
-        self.assertIn(f"calendar already has a workout on {TODAY}", logs)
+        self.assertIn(f"calendar already has Upper on {TODAY}", logs)
         self.dash.schedule.assert_not_called()
         self.dash.unschedule.assert_not_called()
+
+    def test_a_finished_session_on_today_makes_way_for_the_next(self):
+        # Lower was done today, so Upper is next and goes on today at once.
+        self.existing_upper_and_lower()
+        self.schedules.return_value = [("l", "s2", TODAY)]
+        self.dash.unschedule.return_value = {"ok": True}
+        self.dash.schedule.return_value = {"ok": True}
+        rc, _ = self.run_main(DATABASE_URL=DB, SCHEDULE_NEXT="1")
+        self.assertEqual(rc, 0)
+        self.dash.unschedule.assert_called_once_with("l", "s2")
+        self.dash.schedule.assert_called_once_with("u", TODAY)
 
 
 class SendToDeviceTest(unittest.TestCase):

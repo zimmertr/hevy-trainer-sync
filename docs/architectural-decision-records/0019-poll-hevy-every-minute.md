@@ -1,6 +1,6 @@
 # 0019. A poller inside the cluster checks Hevy every 60 seconds and starts hevy2garmin's merge at once
 
-- Status: Accepted
+- Status: Superseded by 0039
 - Date: 2026-11-05
 - Decider: TJ ("I would consider a cloudflare tunnel, but would prefer not to expose anything and just poll every 60s")
 - Issues and PRs: #23, #24 (the late-sync duplicate), KM#1839

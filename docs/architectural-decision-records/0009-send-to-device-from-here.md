@@ -1,6 +1,6 @@
 # 0009. This job sends each new Garmin workout to the watch, using hevy2garmin's Garmin session
 
-- Status: Accepted
+- Status: Accepted. Send to Device turned off by 0040
 - Date: 2026-11-04 (conversation); shipped in #17 and #20, merged 2026-11-05
 - Decider: TJ ("I'd rather do everything on our side for now")
 - Issues and PRs: #7, #13, #17, #20, KM#1822

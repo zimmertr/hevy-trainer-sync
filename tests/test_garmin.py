@@ -61,5 +61,22 @@ class LastUsedDeviceTest(unittest.TestCase):
                 garmin.Garmin("tok").last_used_device_id()
 
 
+@mock.patch.object(garmin, "request")
+class ActivitiesTest(unittest.TestCase):
+    def test_searches_the_date_range(self, request):
+        request.return_value = ([{"activityId": 1}], {})
+        self.assertEqual(garmin.Garmin("tok").activities("2026-11-05", "2026-11-07"), [{"activityId": 1}])
+        self.assertEqual(request.call_args.args, (
+            "GET", "https://connectapi.garmin.com/activitylist-service/activities/search/activities"))
+        self.assertEqual(request.call_args.kwargs["query"],
+                         {"startDate": "2026-11-05", "endDate": "2026-11-07", "limit": 50, "start": 0})
+        self.assertEqual(request.call_args.kwargs["headers"]["Authorization"], "Bearer tok")
+
+    def test_anything_but_a_list_is_no_activities(self, request):
+        for body in (None, {}, {"activityList": []}):
+            request.return_value = (body, {})
+            self.assertEqual(garmin.Garmin("tok").activities("2026-11-05", "2026-11-07"), [])
+
+
 if __name__ == "__main__":
     unittest.main()

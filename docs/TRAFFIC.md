@@ -13,26 +13,33 @@ Nothing calls this tool. [CICD.md](CICD.md) covers how it gets deployed. This pa
 | 5 | Hevy public `POST /v1/routine_folders` | Only when the folder is missing | 0 or 1 |
 | 6 | Hevy public `GET /v1/routines` | Every run | 1 or more pages |
 | 7 | Hevy public `POST /v1/routines` or `PUT /v1/routines/{id}` | Per template that changed | 0 to one per template |
-| 8 | hevy2garmin `POST /api/login`, `POST /api/routines/sync` | Only when a routine changed, or `--force` | 0 or 2 |
+| 8 | hevy2garmin `POST /api/login`, then `POST /api/routines/sync` | The login every run; the sync only when a routine changed, or `--force` | 1 or 2 |
 | 9 | Postgres, two `SELECT`s | Only when step 8 ran and `DATABASE_URL` is set | 0 or 2 |
-| 10 | Garmin `GET /device-service/deviceservice/mylastused` | Same as 9, unless `GARMIN_DEVICE_ID` is set | 0 or 1 |
-| 11 | Garmin `POST /device-service/devicemessage/messages` | Per changed routine | 0 to one per template |
+| 10 | Garmin `GET /device-service/deviceservice/mylastused` | Same as 9, with `SEND_TO_DEVICE=1` (off in the cluster), unless `GARMIN_DEVICE_ID` is set | 0 or 1 |
+| 11 | Garmin `POST /device-service/devicemessage/messages` | Per changed routine, with `SEND_TO_DEVICE=1` | 0 to one per template |
 | 12 | hevy2garmin `POST /api/routines/sync` with no ids | Only when Garmin answers 401 at step 10 | 0 or 1 |
+| 13 | Postgres, `SELECT` on `routine_schedules` | Every run, with `SCHEDULE_NEXT=1` | 1 |
+| 14 | hevy2garmin `POST /api/routines/{id}/unschedule` | Per calendar entry other than the next workout on today | Usually 0; 1 after a session or a skipped day |
+| 15 | hevy2garmin `POST /api/routines/{id}/schedule` | When the next workout isn't on today yet | Usually 0; 1 a day |
 
-A run with nothing to do makes about six Hevy calls and nothing else. hevy2garmin then makes its own Garmin calls for step 8; see its source.
+A run with nothing to do makes about six Hevy calls, the dashboard login and one database read. hevy2garmin then makes its own Garmin calls for step 8; see its source.
 
 ## The poller
 
 | Call | When | Count |
 |---|---|---|
 | Hevy public `GET /v1/workouts/events?since=` | Every `POLL_SECONDS` | 1 per minute, more pages only when more than ten events arrive at once |
-| hevy2garmin `POST /api/cron/webhook` | Per workout saved or edited | Usually one or two a session |
+| Postgres, one `SELECT` on `synced_workouts` | Every poll while a workout is waiting | Usually a few minutes after each session |
+| Postgres, `SELECT`s on `app_cache` and `platform_credentials` | Every poll while the newest waiting workout has no watch activity yet | Same |
+| Garmin `GET /activitylist-service/activities/search/activities` | Same | 1 per minute until the watch syncs, then none |
+| hevy2garmin `POST /api/cron/webhook` | Once the watch activity is found | One a session, again after 30 minutes only if the merge never landed |
+| hevy2garmin `POST /api/login`, `POST /api/routines/sync` with no ids | Only when Garmin answers 401 | 0 or 2 |
 
-Each webhook call starts up to ten of hevy2garmin's own merge-only attempts over about 28 minutes, each of which asks Garmin for the matching activity. The first that finds it merges and stops.
+hevy2garmin's first attempt after the webhook call finds the same activity, merges and stops. A workout the watch never recorded costs one Garmin list a minute for 48 hours, then nothing.
 
 ## Per day
 
-The poller makes 1,440 event reads a day. The CronJob runs 24 times a day. In a week with two workouts and one Monday rename, Garmin sees roughly six device messages and six last-used lookups from this tool, and hevy2garmin makes its own calls to rebuild those workouts.
+The poller makes 1,440 event reads a day, plus a Garmin activity list a minute for the few minutes between Finish in Hevy and the watch's sync. The CronJob runs 24 times a day. In a week, hevy2garmin makes about one calendar change a day for this tool, and its own calls to rebuild the workouts after each session and on Monday. This tool sends no device messages.
 
 ## Identity and caching
 
@@ -40,8 +47,8 @@ Every call names this tool in its `User-Agent` (`http.USER_AGENT`), except Garmi
 
 ## Timeouts and retries
 
-HTTP calls time out after 30 seconds (`http.request`), except the dashboard: 300 seconds for a routine sync, which waits on Garmin, and 120 for schedule and unschedule. Postgres connections time out after 10 seconds. A `429` with a `Retry-After` of at most 60 seconds is waited out and retried once (`http.MAX_RETRY_AFTER_S`); a longer wait, a missing header, or a second `429` fails the call. Nothing else is retried except the program call after a Hevy refresh on a 401 and the one Garmin token refresh above. Record: [0035](architectural-decision-records/0035-a-polite-client.md). The poller does not retry within a poll either, but any failed call, network errors included, leaves its mark where it was, so the next poll asks again. A failed run waits for the next hour; `backoffLimit: 0` keeps Kubernetes from retrying a run that might have half-written routines.
+HTTP calls time out after 30 seconds (`http.request`), except the dashboard: 300 seconds for a routine sync, which waits on Garmin, and 120 for schedule and unschedule. Postgres connections time out after 10 seconds. A `429` with a `Retry-After` of at most 60 seconds is waited out and retried once (`http.MAX_RETRY_AFTER_S`); a longer wait, a missing header, or a second `429` fails the call. Nothing else is retried except the program call after a Hevy refresh on a 401 and the one Garmin token refresh above. Record: [0035](architectural-decision-records/0035-a-polite-client.md). The poller does not retry within a poll either. A failed Hevy read leaves the mark where it was, and any other failed call leaves the workout waiting, so the next poll asks again. A failed run waits for the next hour; `backoffLimit: 0` keeps Kubernetes from retrying a run that might have half-written routines.
 
 ## Inbound
 
-None. Neither pod has a Service or listens on anything. Hevy's webhook would need hevy2garmin reachable from the internet; the poller exists so it does not have to be (record [0019](architectural-decision-records/0019-poll-hevy-every-minute.md)).
+None. Neither pod has a Service or listens on anything. Hevy's webhook would need hevy2garmin reachable from the internet; the poller exists so it does not have to be (records [0019](architectural-decision-records/0019-poll-hevy-every-minute.md), [0039](architectural-decision-records/0039-merge-only-after-the-watch-activity.md)).

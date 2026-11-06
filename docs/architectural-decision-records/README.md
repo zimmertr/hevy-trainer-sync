@@ -27,8 +27,8 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0005](0005-images-from-ci-prs-only.md) | Images are built only by CI, and main changes only through PRs | 2026-11-04 | Accepted. Tag convention superseded by 0021, approval rule narrowed by 0025 |
 | [0006](0006-session-on-a-volume.md) | The Hevy session is bootstrapped once from the whole cookie and then lives only on a volume | 2026-11-04 | Accepted |
 | [0007](0007-hourly-cronjob.md) | The mirror runs hourly as a Kubernetes CronJob | 2026-11-04 | Accepted |
-| [0008](0008-no-calendar-scheduling.md) | Workouts are not scheduled on the Garmin calendar | 2026-11-04 | Accepted |
-| [0009](0009-send-to-device-from-here.md) | This job sends each new Garmin workout to the watch, using hevy2garmin's Garmin session | 2026-11-04 | Accepted |
+| [0008](0008-no-calendar-scheduling.md) | Workouts are not scheduled on the Garmin calendar | 2026-11-04 | Superseded by 0040 |
+| [0009](0009-send-to-device-from-here.md) | This job sends each new Garmin workout to the watch, using hevy2garmin's Garmin session | 2026-11-04 | Accepted. Send to Device turned off by 0040 |
 | [0010](0010-program-week-in-names.md) | Routine names carry the program week, counted from the program's start date | 2026-11-05 | Accepted |
 | [0011](0011-ci-bumps-manifests.md) | CI bumps the image tag in Kubernetes-Manifests with one self-merging PR | 2026-11-05 | Accepted |
 | [0012](0012-tag-edited-in-place.md) | CI edits the newTag line in place instead of running kustomize edit | 2026-11-05 | Accepted |
@@ -38,7 +38,7 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0016](0016-garmin-keeps-posting-to-strava.md) | Garmin's own Strava connection stays on | 2026-11-05 | Superseded by 0020 |
 | [0017](0017-docs-and-records.md) | Docs and decision records are kept the way Bluebird keeps them | 2026-11-05 | Accepted |
 | [0018](0018-full-coverage.md) | Every change ships with tests, and coverage stays at 100% of lines and branches | 2026-11-05 | Superseded by 0032 |
-| [0019](0019-poll-hevy-every-minute.md) | A poller inside the cluster checks Hevy every 60 seconds and starts hevy2garmin's merge at once | 2026-11-05 | Accepted |
+| [0019](0019-poll-hevy-every-minute.md) | A poller inside the cluster checks Hevy every 60 seconds and starts hevy2garmin's merge at once | 2026-11-05 | Superseded by 0039 |
 | [0020](0020-the-watch-recording-is-what-strava-keeps.md) | Strava keeps what the watch recorded, so the watch's own recording has to be right, and this tool never uploads to Strava | 2026-11-05 | Accepted. Supersedes 0016 |
 | [0021](0021-semver-release-per-merge.md) | Every merge to main cuts a SemVer release, and GitVersion reads the bump from the PR title | 2026-11-05 | Accepted. Supersedes the tag convention of 0005 |
 | [0022](0022-scan-before-production.md) | Production moves only onto a scanned image, and the image takes Debian's fixes at build time | 2026-11-05 | Accepted; amended by 0034 |
@@ -58,3 +58,5 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0036](0036-hashed-locks.md) | The image installs a hashed lock compiled from its direct pins | 2026-11-05 | Accepted |
 | [0037](0037-minor-updates-merge-themselves.md) | Dependabot's minor updates merge themselves too | 2026-11-05 | Accepted. Amends 0025 |
 | [0038](0038-ci-runs-on-yggdrasils-modules.md) | CI runs on yggdrasil's shared modules, pinned to a release commit | 2026-11-05 | Accepted |
+| [0039](0039-merge-only-after-the-watch-activity.md) | The poller asks hevy2garmin to merge only once the watch's activity is on Garmin, and nothing is ever uploaded | 2026-11-06 | Accepted. Supersedes 0019 |
+| [0040](0040-the-calendar-carries-workouts-to-the-watch.md) | Workouts reach the watch through the Garmin calendar, one planned entry at a time, and Send to Device is off | 2026-11-06 | Accepted. Supersedes 0008 |
