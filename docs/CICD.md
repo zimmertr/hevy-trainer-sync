@@ -2,7 +2,7 @@
 
 How a change travels from a pull request to the CronJob in the cluster.
 
-> **Keep this current.** A change to anything under `.github/`, to `GitVersion.yml`, to the image tag convention, or to how Kubernetes-Manifests wires the job updates this page in the same PR. Changes made in Kubernetes-Manifests that affect this flow come back here too; nothing enforces that.
+> **Keep this current.** A change to anything under `.github/`, to the yggdrasil release the workflows pin, to the image tag convention, or to how Kubernetes-Manifests wires the job updates this page in the same PR. Changes made in Kubernetes-Manifests that affect this flow come back here too; nothing enforces that.
 
 ## Systems
 
@@ -26,9 +26,8 @@ How a change travels from a pull request to the CronJob in the cluster.
   | `feat:`, `feat(scope):` | minor |
   | `fix`, `perf`, `refactor`, `chore`, `docs`, `style`, `test`, `ci`, `build`, each with an optional `(scope)` | patch |
 
-  The body never counts: a `BREAKING CHANGE:` footer changes nothing, so a major is always the title's `!`. A `!` anywhere else in the title is not a major. Case does not matter. Dependabot's `build(deps):` titles are patches. A title no pattern reads still releases a patch, which is why the `PR Title` check fails it. The patterns are Bluebird's, unchanged.
-- **The first version** was 0.1.0, seeded by `next-version` in `GitVersion.yml`. From that tag on, each merge counts from the newest tag.
-- **Re-runs finish a release.** Each piece (image, git tag, GitHub release) is made only when it is missing, and a run whose version has all three does nothing. See [Finishing a failed release](#finishing-a-failed-release).
+  The body never counts: a `BREAKING CHANGE:` footer changes nothing, so a major is always the title's `!`. A `!` anywhere else in the title is not a major. Case does not matter. Dependabot's `build(deps):` titles are patches. A title no pattern reads still releases a patch, which is why the `PR Title` check fails it. The patterns are Bluebird's, unchanged, and ship as the release module's default GitVersion rules.
+- **The first version** was 0.1.0. Each merge counts from the newest tag.
 
 ## Flow
 
@@ -37,43 +36,42 @@ flowchart TD
     PR[Pull request] -->|pull_request| T[test + PR Title]
     T -->|green, TJ approves, squash merge| M[main]
     M -->|push| T2[test]
-    T2 --> V[Determine Version<br/>GitVersion reads the title]
-    V --> B[Build & Push<br/>:version, SBOM, provenance<br/>then git tag v-version]
-    B --> S[Scan Pushed Image<br/>Trivy, by digest]
-    S --> R[Create GitHub Release]
-    S --> U[Update Kubernetes Manifests]
-    U -->|force-push chore/hevy-trainer-sync-image<br/>edit newTag in place| KPR[Kubernetes-Manifests PR]
+    T2 --> V[Version<br/>GitVersion reads the title]
+    V --> B[Build & Push<br/>:version, SBOM, provenance]
+    B --> S[Scan Pushed Image<br/>Trivy, by version tag]
+    S --> R[Tag and Release]
+    R --> U[Deploy Bump]
+    U -->|push chore/hevy-trainer-sync-image<br/>yq sets newTag| KPR[Kubernetes-Manifests PR]
     KPR -->|auto-merge, squash| KM[Kubernetes-Manifests main]
     KM -->|Argo CD sync| C[CronJob and poller use the new tag]
 ```
 
 Every PR runs three workflows, and all four of their jobs are required checks:
 
-- **test** (`test.yml`): Python 3.13, `pip install --require-hashes -r requirements-dev.txt`, the unittest suite under `coverage`, and `coverage report` across the package and `.github/scripts`, in the log and in the run's summary. It has no floor; the aim is 100%. Record: [0032](architectural-decision-records/0032-coverage-aims-at-100.md).
-- **PR Title / PR Title** (`pr-title.yml`): yggdrasil's `pr-title` module, which fails a title whose type isn't one of the types in `GitVersion.yml`. It reruns when the title is edited. Record: [0038](architectural-decision-records/0038-ci-runs-on-yggdrasils-modules.md).
-- **Lint** and **Docker Build / Docker Build** (`pr.yml`). `Lint` runs ruff 0.16.0 under `ruff.toml`, Bluebird's rule set. `Docker Build` is yggdrasil's `docker-build` module. It lints the `Dockerfile` with hadolint, builds the `linux/amd64` image without pushing it, and scans it with Trivy under `trivy.yaml`. It posts the table as one comment that each push rewrites (not on Dependabot's PRs, whose token can't comment). Then a smoke test runs the image: `--help` answers, psycopg loads on the image's Python, the zoneinfo data is there, and it runs as UID 1000. Last, it fails on a fixable Critical or High, as the release would. Records: [0030](architectural-decision-records/0030-pr-lint-and-image-checks.md), [0038](architectural-decision-records/0038-ci-runs-on-yggdrasils-modules.md).
+- **test** (`test.yml`): Python 3.13, `pip install --require-hashes -r requirements-dev.txt`, the unittest suite under `coverage`, and `coverage report` across the package, in the log and in the run's summary. It has no floor; the aim is 100%. Record: [0032](architectural-decision-records/0032-coverage-aims-at-100.md).
+- **PR Title / PR Title** (`pr-title.yml`): yggdrasil's `pr-title` module, which fails a title whose type isn't one of the types in the table above. It reruns when the title is edited. Record: [0038](architectural-decision-records/0038-ci-runs-on-yggdrasils-modules.md).
+- **Lint** and **Docker Build / Docker Build** (`pr.yml`). `Lint` runs ruff 0.16.0 under `ruff.toml`, Bluebird's rule set. `Docker Build` is yggdrasil's `docker-build` module. It lints the `Dockerfile` with hadolint, builds the `linux/amd64` image without pushing it, and scans it with Trivy under yggdrasil's default scan settings. It posts the table as one comment that each push rewrites (not on Dependabot's PRs, whose token can't comment). Then a smoke test runs the image: `--help` answers, psycopg loads on the image's Python, the zoneinfo data is there, and it runs as UID 1000. Last, it fails on a fixable Critical or High, as the release would. Records: [0030](architectural-decision-records/0030-pr-lint-and-image-checks.md), [0038](architectural-decision-records/0038-ci-runs-on-yggdrasils-modules.md).
 
-A push to main runs `release.yml`, one run at a time (`concurrency: release`). It also runs by hand from the Actions tab, from main only.
+A push to main runs `release.yml`, one run at a time (`concurrency: release`). It runs `test` on the squash commit, then yggdrasil's `release` module, which runs these jobs. Record: [0038](architectural-decision-records/0038-ci-runs-on-yggdrasils-modules.md).
 
-1. **test** calls `test.yml` again, on the squash commit.
-2. **Determine Version** runs GitVersion 6.8.2 over the full history and asks Docker Hub and GitHub whether the image, the tag and the release for that version all exist. If they do, everything below is skipped.
-3. **Build & Push** builds `linux/amd64` and pushes `zimmertr/hevy-trainer-sync:<version>` with an SBOM and provenance, labelled with the version and the commit. Then it tags the commit `v<version>`. If the image is already there from this commit, it skips the build; from another commit, it fails. Records: [0005](architectural-decision-records/0005-images-from-ci-prs-only.md), [0023](architectural-decision-records/0023-pinned-actions-and-attestations.md).
-4. **Scan Pushed Image** runs Trivy against the pushed digest with `trivy.yaml`, and fails on any fixable Critical or High. The next two jobs need it. Record: [0022](architectural-decision-records/0022-scan-before-production.md).
-5. **Create GitHub Release** makes the release for the tag, with notes from the merged PR titles. A release finished behind a newer one does not take "Latest".
-6. **Update Kubernetes Manifests** clones Kubernetes-Manifests with the `GH_PAT` secret, resets `chore/hevy-trainer-sync-image` to that repo's main, and runs `.github/scripts/bump_manifest_tag.py`, which changes the one `newTag:` line under `name: zimmertr/hevy-trainer-sync`. Then it force-pushes, opens or retitles the single PR, and arms auto-merge. If the tag is already current it stops, and if a newer release is already out it leaves the manifests alone. Records: [0011](architectural-decision-records/0011-ci-bumps-manifests.md), [0012](architectural-decision-records/0012-tag-edited-in-place.md).
-7. **Argo CD** applies the merged manifests. To skip the wait, refresh it:
+1. **Version** runs GitVersion 6.8.2 over the full history. If that version is already tagged, everything below is skipped.
+2. **Build & Push** builds `linux/amd64` and pushes `zimmertr/hevy-trainer-sync:<version>` with an SBOM and provenance, labelled with the version and the commit. Records: [0005](architectural-decision-records/0005-images-from-ci-prs-only.md), [0023](architectural-decision-records/0023-pinned-actions-and-attestations.md).
+3. **Scan Pushed Image** runs Trivy against the pushed version tag with the same settings, and fails on any fixable Critical or High. Everything below needs it. Record: [0022](architectural-decision-records/0022-scan-before-production.md).
+4. **Tag and Release** tags the commit `v<version>` and makes the immutable release, with notes from the merged PR titles.
+5. **Deploy Bump** checks out Kubernetes-Manifests with the `GH_PAT` secret and sets the `newTag` of the `zimmertr/hevy-trainer-sync` image in `misc/hevy2garmin/kustomization.yml` with `yq`, which keeps comments but can drop blank lines. Then it pushes `chore/hevy-trainer-sync-image` fresh off that repo's main, opens or retitles the single PR, and arms auto-merge. If the tag is already current it does nothing. Records: [0011](architectural-decision-records/0011-ci-bumps-manifests.md), [0012](architectural-decision-records/0012-tag-edited-in-place.md).
+6. **Argo CD** applies the merged manifests. To skip the wait, refresh it:
 
    ```sh
    kubectl -n argo-system annotate application hevy2garmin argocd.argoproj.io/refresh=normal --overwrite
    ```
 
-8. **The poller** restarts on the new image as soon as Argo CD applies it. **The next scheduled run** of the mirror uses it too. To run the mirror now:
+7. **The poller** restarts on the new image as soon as Argo CD applies it. **The next scheduled run** of the mirror uses it too. To run the mirror now:
 
    ```sh
    kubectl -n hevy2garmin-system create job --from=cronjob/hevy-trainer-sync hevy-trainer-sync-manual-$(date +%H%M)
    ```
 
-Every action is pinned to a commit SHA, and the base image to tag@digest. GitVersion's own version, `versionSpec: '6.8.2'`, is not seen by Dependabot and moves by hand.
+Every action and yggdrasil module is pinned to a commit SHA, and the base image to tag@digest. GitVersion's version is pinned inside the release module and moves with yggdrasil.
 
 ## Branch protection
 
@@ -97,9 +95,7 @@ A fixable Critical or High in the pushed image fails **Scan Pushed Image**. Prod
 
 ## Finishing a failed release
 
-Rerun the failed jobs from the run's page. Each job makes only what is missing, so a rerun after a failed tag push pushes the tag, and a rerun after a failed release makes the release.
-
-Build & Push fails with "was built from …, not …" when the version's image exists but came from another commit. Mainline gives every commit its own version, so this is not a rerun. Docker Hub refuses to overwrite or delete the tag anyway. Find which run pushed it, and merge a new PR so the next release gets a new version.
+Use "Re-run failed jobs" on the run's page, never "Re-run all jobs": once the image is pushed, a second Build & Push fails, because Docker Hub refuses to overwrite the version's tag. Don't re-run an old release after a newer one shipped, because its Deploy Bump would move Kubernetes-Manifests back. Merge a new PR instead, and the next release gets a new version.
 
 ## What the pipeline does not do
 
@@ -112,6 +108,6 @@ Build & Push fails with "was built from …, not …" when the version's image e
 | Secret | Where | Used by |
 |---|---|---|
 | `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` | This repo's Actions secrets | Build & Push |
-| `GH_PAT` | This repo's Actions secrets | Update Kubernetes Manifests. Needs contents and pull-requests write on Kubernetes-Manifests |
-| `GITHUB_TOKEN` | Given to each run | Determine Version (reads releases), Build & Push (pushes the tag), Create GitHub Release, the weekly scan (SARIF upload), the auto-merge comment |
+| `GH_PAT` | This repo's Actions secrets | Deploy Bump, as the module's `deploy-token`. Needs contents and pull-requests write on Kubernetes-Manifests |
+| `GITHUB_TOKEN` | Given to each run | Tag and Release, the weekly scan (SARIF upload), the auto-merge comment |
 | `AUTO_MERGE_PAT` | This repo's **Dependabot** secrets | `dependabot-auto-merge.yml`. TJ's personal PAT. A merge made with `GITHUB_TOKEN` would not start `release.yml` |

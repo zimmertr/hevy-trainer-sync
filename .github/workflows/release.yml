@@ -1,322 +1,47 @@
 name: release
 
-# Every merge to main cuts a release: GitVersion reads the squash commit's
-# title for the bump, the image is pushed under that version, scanned, tagged
-# in git, published as a GitHub release, and Kubernetes-Manifests is bumped to
-# it. Bluebird's release pipeline, minus its arm64 build and Helm chart.
-# Decision records 0021, 0022 and 0023.
+# Every merge to main cuts a release through yggdrasil's release module.
+# GitVersion reads the bump from the squash commit's title, the image is
+# pushed under that version and scanned, the commit is tagged and released,
+# then a self-merging Kubernetes-Manifests PR points the CronJob at it.
+# Decision records 0021, 0022 and 0038.
 on:
   push:
     branches: [main]
-  # Manual runs from the Actions tab, from main only: every job checks the
-  # ref, because a dispatch from another branch would build that branch, push
-  # its image and bump production with it (GitVersion gives a branch a
-  # prerelease version that sorts above main's).
-  workflow_dispatch:
 
-# One release at a time, so two quick merges cannot race on the manifest bump
-# and leave the older version deployed. cancel-in-progress stays false so
-# every merge still releases, one after the other.
+# One release at a time, so two quick merges cannot race on the manifest bump.
+# cancel-in-progress stays false so every merge still releases, in order.
 concurrency:
   group: release
   cancel-in-progress: false
 
-# Least privilege by default; the two jobs that write to this repo say so.
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
+  # The squash commit, tested as merged before anything is built from it.
   test:
-    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/test.yml
+    permissions:
+      contents: read
 
-  # The next SemVer, and whether it is already out.
-  determine-version:
-    name: Determine Version
-    runs-on: ubuntu-latest
+  release:
+    name: Release
     needs: test
-    if: github.ref == 'refs/heads/main'
-    timeout-minutes: 10
-    outputs:
-      semVer: ${{ steps.gitversion.outputs.semVer }}
-      released: ${{ steps.published.outputs.released }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0  # GitVersion needs the full history and every tag
-          persist-credentials: false
-      - uses: gittools/actions/gitversion/setup@7417b1089e2c7de93510f1901d656ddf60bb024f # v4.7.0
-        with:
-          # Exact, not '6.x': the version it computes goes into image tags, git
-          # tags and production, so the engine moves only through a reviewed
-          # change. Dependabot does not see this line; bump it by hand, and
-          # rerun the table in decision record 0021 when you do.
-          versionSpec: '6.8.2'
-      - id: gitversion
-        uses: gittools/actions/gitversion/execute@7417b1089e2c7de93510f1901d656ddf60bb024f # v4.7.0
-      # A release is three things made in order: the image, the git tag, the
-      # GitHub release. Only when all three exist is there nothing left to do.
-      # A guard on the image alone cannot finish a run that died between the
-      # push and the tag, so each job below makes its own piece only when that
-      # piece is missing, and a re-run finishes the release.
-      - name: Check what this version has already published
-        id: published
-        env:
-          SEMVER: ${{ steps.gitversion.outputs.semVer }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          have() { if "$@" >/dev/null 2>&1; then echo true; else echo false; fi; }
-          IMAGE=$(have docker manifest inspect "zimmertr/hevy-trainer-sync:${SEMVER}")
-          TAG=$(have git ls-remote --exit-code origin "refs/tags/v${SEMVER}")
-          RELEASE=$(have gh release view "v${SEMVER}" --repo "$GITHUB_REPOSITORY")
-          echo "${SEMVER}: image=${IMAGE} tag=${TAG} release=${RELEASE}"
-          if [ "${IMAGE}${TAG}${RELEASE}" = truetruetrue ]; then
-            echo "released=true" >> "$GITHUB_OUTPUT"
-            echo "v${SEMVER} is already released; skipping."
-          else
-            echo "released=false" >> "$GITHUB_OUTPUT"
-          fi
-
-  # Build and push the image under the version, then tag the commit in git.
-  # Either half is skipped when it already exists, so a re-run after a failed
-  # tag push pushes the tag without rebuilding the image.
-  build-and-push:
-    name: Build & Push
-    runs-on: ubuntu-latest
-    needs: determine-version
-    if: github.ref == 'refs/heads/main' && needs.determine-version.outputs.released == 'false'
-    # Releases queue behind each other, so a hung registry push would hold
-    # every later merge until GitHub's six-hour default.
-    timeout-minutes: 20
+    uses: zimmertr/yggdrasil/.github/workflows/release.yml@4e5afc95d7f3ba6c99d18e245fd3cf726c72fb63 # v0.8.1
     permissions:
-      contents: write  # the git tag
-    # The digest of what is in the registry, for the scan: this build's, or on
-    # a re-run that skipped the build, the registry's for the image the check
-    # below proved was built from this commit.
-    outputs:
-      digest: ${{ steps.build.outputs.digest || steps.image.outputs.digest }}
-    steps:
-      # The one checkout that keeps its token, because the tag step pushes
-      # with it. Every other checkout drops it.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # The docker-container driver, which the attestations below need.
-      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      # Asked here, not read from Determine Version: "Re-run failed jobs" keeps
-      # that job's outputs from the first attempt, which predate the push. An
-      # image already under this version must have been built from this
-      # commit, or the git tag would name source the image does not hold.
-      # Mainline gives every commit its own version, so a mismatch is never a
-      # re-run and is stopped.
-      - name: Check whether the image is already pushed
-        id: image
-        env:
-          IMAGE: zimmertr/hevy-trainer-sync:${{ needs.determine-version.outputs.semVer }}
-        run: |
-          if ! docker manifest inspect "$IMAGE" >/dev/null 2>&1; then
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          # `.Image` is a map keyed by platform only when the index holds more
-          # than one. This image is amd64 alone, so it is one image, and
-          # Bluebird's `index .Image "linux/amd64"` errors on it ("can't index
-          # item of type v1.Image", 0.1.0, 2026-11-05). jq takes either shape.
-          REV=$(docker buildx imagetools inspect "$IMAGE" --format '{{ json .Image }}' \
-            | jq -r 'if has("linux/amd64") then .["linux/amd64"] else . end
-                     | .config.Labels["org.opencontainers.image.revision"] // empty')
-          if [ "$REV" != "$GITHUB_SHA" ]; then
-            echo "::error::${IMAGE} was built from ${REV:-an unknown commit}, not ${GITHUB_SHA}. See docs/CICD.md, Finishing a failed release."
-            exit 1
-          fi
-          echo "exists=true" >> "$GITHUB_OUTPUT"
-          echo "digest=$(docker buildx imagetools inspect "$IMAGE" --format '{{ .Manifest.Digest }}')" >> "$GITHUB_OUTPUT"
-          echo "${IMAGE} is already pushed from this commit; skipping the build."
-      - id: build
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        if: steps.image.outputs.exists == 'false'
-        with:
-          context: .
-          # The cluster is amd64 only.
-          platforms: linux/amd64
-          push: true
-          # The version only. No `latest`: Kubernetes-Manifests pins the
-          # version, and a moving tag is one nothing should pull.
-          tags: zimmertr/hevy-trainer-sync:${{ needs.determine-version.outputs.semVer }}
-          # Changes on every build, so the apt upgrade layer always reruns
-          # (Dockerfile, decision record 0034).
-          build-args: APP_COMMIT=${{ github.sha }}
-          # The revision label is what the re-run check above reads.
-          labels: |
-            org.opencontainers.image.version=${{ needs.determine-version.outputs.semVer }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-          # Supply-chain attestations, published as extra manifests beside the
-          # image. Docker Hub lists them as "unknown/unknown" rows; cosmetic.
-          provenance: mode=max
-          sbom: true
-      # A tag that already names this commit is a re-run's and is left alone.
-      # One that names another commit is refused rather than moved.
-      - name: Tag the release commit
-        env:
-          TAG: v${{ needs.determine-version.outputs.semVer }}
-        run: |
-          # The peeled line (^{}) is the commit an annotated tag points at; a
-          # lightweight tag has only the plain line, which is the commit itself.
-          REFS=$(git ls-remote origin "refs/tags/${TAG}" "refs/tags/${TAG}^{}")
-          AT=$(printf '%s\n' "$REFS" | awk '$2 ~ /\^\{\}$/ {print $1; exit}')
-          [ -n "$AT" ] || AT=$(printf '%s\n' "$REFS" | awk 'NF {print $1; exit}')
-          if [ -n "$AT" ]; then
-            if [ "$AT" != "$GITHUB_SHA" ]; then
-              echo "::error::${TAG} already names ${AT}, not ${GITHUB_SHA}."
-              exit 1
-            fi
-            echo "${TAG} already names this commit."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "$TAG" -m "Release ${TAG}"
-          git push origin "$TAG"
-
-  # Scan what was pushed, by digest, before anything moves onto it. Every later
-  # job needs this one, so a fixable Critical or High holds production on the
-  # previous release and makes no GitHub release. The image and the git tag
-  # stay published; the fix is the next release (docs/CICD.md, The release
-  # scan). No Docker Hub login: the image is public, and this job then holds
-  # no credential for Trivy's code to see.
-  scan:
-    name: Scan Pushed Image
-    runs-on: ubuntu-latest
-    needs: [determine-version, build-and-push]
-    if: github.ref == 'refs/heads/main' && needs.determine-version.outputs.released == 'false'
-    timeout-minutes: 15
-    steps:
-      # Only for trivy.yaml.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Scan the image (Trivy)
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        env:
-          # The digest names the index that holds the image and its
-          # attestations; this says which image in it to read.
-          TRIVY_PLATFORM: linux/amd64
-        with:
-          image-ref: zimmertr/hevy-trainer-sync@${{ needs.build-and-push.outputs.digest }}
-          format: json
-          output: trivy.json
-          ignore-unfixed: true
-          trivy-config: trivy.yaml
-      - name: Fail on fixable Critical or High vulnerabilities
-        env:
-          SEMVER: ${{ needs.determine-version.outputs.semVer }}
-        run: |
-          # `?` on both levels: a report with no results is the clean case.
-          COUNT=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL" or .Severity == "HIGH")] | length' trivy.json)
-          if [ "$COUNT" -gt 0 ]; then
-            trivy convert --format table trivy.json >> "$GITHUB_STEP_SUMMARY"
-            echo "::error::${COUNT} fixable Critical/High vulnerabilities in zimmertr/hevy-trainer-sync:${SEMVER}. Production stays on the previous release. See docs/CICD.md, The release scan."
-            exit 1
-          fi
-          echo "No fixable Critical/High vulnerabilities in zimmertr/hevy-trainer-sync:${SEMVER}." >> "$GITHUB_STEP_SUMMARY"
-
-  # A GitHub release with notes generated from the merged PR titles. The gh CLI
-  # rather than an action, because a re-run needs to ask first whether the
-  # release exists (an immutable release cannot be edited, only skipped), and
-  # --verify-tag refuses to run without the tag where the API would instead
-  # create one at the head of main, which may not be this commit.
-  create-release:
-    name: Create GitHub Release
-    runs-on: ubuntu-latest
-    needs: [determine-version, build-and-push, scan]
-    if: github.ref == 'refs/heads/main' && needs.determine-version.outputs.released == 'false'
-    timeout-minutes: 5
-    permissions:
-      contents: write
-    steps:
-      - name: Create the release unless it exists
-        env:
-          TAG: v${{ needs.determine-version.outputs.semVer }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "${TAG} already has a release."
-            exit 0
-          fi
-          # A release finished late, behind a newer one, must not take
-          # "Latest" from it. update-manifests makes the same test.
-          LATEST=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName 2>/dev/null || true)
-          LATEST_FLAG=--latest
-          if [ -n "$LATEST" ] && [ "$(printf '%s\n%s\n' "${LATEST#v}" "${TAG#v}" | sort -V | tail -1)" != "${TAG#v}" ]; then
-            LATEST_FLAG=--latest=false
-          fi
-          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes --verify-tag "$LATEST_FLAG"
-
-  # Bump the pinned tag in Kubernetes-Manifests so Argo CD rolls the release
-  # out. A fixed branch force-pushed fresh off main each time and one
-  # self-merging PR, so rapid releases collapse into a single up-to-date PR
-  # (decision record 0011). It waits on the scan, not on create-release: the
-  # release notes are a link that resolves by the time anyone opens the PR.
-  # GH_PAT needs contents and pull-requests write on zimmertr/Kubernetes-Manifests.
-  update-manifests:
-    name: Update Kubernetes Manifests
-    runs-on: ubuntu-latest
-    needs: [determine-version, build-and-push, scan]
-    if: github.ref == 'refs/heads/main' && needs.determine-version.outputs.released == 'false'
-    timeout-minutes: 10
-    steps:
-      # Only for the bump script, and without the token: the step below holds
-      # GH_PAT, and nothing else in this job needs a credential.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          sparse-checkout: .github/scripts/bump_manifest_tag.py
-          sparse-checkout-cone-mode: false
-          path: app
-      - name: Open or update the image bump PR
-        env:
-          SEMVER: ${{ needs.determine-version.outputs.semVer }}
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-          APP_REPO: ${{ github.repository }}
-          SERVER_URL: ${{ github.server_url }}
-        run: |
-          # A re-run that finishes an older release after a newer one shipped
-          # must not move production back onto the older image.
-          LATEST=$(gh release view --repo "$APP_REPO" --json tagName -q .tagName 2>/dev/null || true)
-          if [ -n "$LATEST" ] && [ "$(printf '%s\n%s\n' "${LATEST#v}" "$SEMVER" | sort -V | tail -1)" != "$SEMVER" ]; then
-            echo "::notice::${LATEST} is newer than ${SEMVER}; leaving the manifests alone."
-            exit 0
-          fi
-          BR="chore/hevy-trainer-sync-image"
-          git clone "https://x-access-token:${GH_TOKEN}@github.com/zimmertr/Kubernetes-Manifests.git" k8s-manifests
-          cd k8s-manifests
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -B "$BR" origin/main
-          # Edits the one newTag line in place (decision record 0012).
-          python3 ../app/.github/scripts/bump_manifest_tag.py misc/hevy2garmin/kustomization.yml "$SEMVER"
-          if git diff --quiet; then
-            echo "Manifests already at ${SEMVER}; nothing to bump."
-            exit 0
-          fi
-          TITLE="chore(hevy2garmin): bump hevy-trainer-sync to ${SEMVER}"
-          git commit -am "$TITLE"
-          git push -f origin "$BR"
-
-          BODY="Automated by the hevy-trainer-sync ${SEMVER} release. Pins \`zimmertr/hevy-trainer-sync:${SEMVER}\`.
-
-          - Release: ${SERVER_URL}/${APP_REPO}/releases/tag/v${SEMVER}"
-          PR_NUM="$(gh pr list --head "$BR" --state open --json number -q '.[0].number')"
-          if [ -n "$PR_NUM" ]; then
-            # Both name the version, so a PR carried across releases would
-            # otherwise advertise a superseded one.
-            gh pr edit "$PR_NUM" --title "$TITLE" --body "$BODY"
-          else
-            gh pr create --base main --head "$BR" --title "$TITLE" --body "$BODY"
-          fi
-          # Auto-merge is disarmed by every force-push, so re-arm each time. The
-          # fallback covers checks that are already green, where --auto is refused.
-          gh pr merge --auto --squash "$BR" || gh pr merge --squash "$BR"
+      contents: write # the tag and release
+    with:
+      # linux/amd64 only: the cluster is amd64.
+      images: '[{"image": "zimmertr/hevy-trainer-sync"}]'
+      # The fixed branch and title keep one open bump PR across releases.
+      deploys: >-
+        [{"repo": "zimmertr/Kubernetes-Manifests",
+          "file": "misc/hevy2garmin/kustomization.yml",
+          "set": "(.images[] | select(.name == \"zimmertr/hevy-trainer-sync\")).newTag",
+          "branch": "chore/hevy-trainer-sync-image",
+          "title": "chore(hevy2garmin): bump hevy-trainer-sync"}]
+    secrets:
+      dockerhub-username: ${{ secrets.DOCKERHUB_USERNAME }}
+      dockerhub-token: ${{ secrets.DOCKERHUB_TOKEN }}
+      # Contents and pull-requests write on Kubernetes-Manifests.
+      deploy-token: ${{ secrets.GH_PAT }}

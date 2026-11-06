@@ -15,6 +15,7 @@ This repo's workflows were the source most of zimmertr/yggdrasil's modules were 
 
 - The PR title check, the PR image check, the Dependabot auto-merge, the weekly image scan and the release call yggdrasil's modules (`pr-title`, `docker-build`, `auto-merge`, `image-scan`, `release`), each pinned to a yggdrasil release's commit SHA with the version in a comment.
 - What is this repo's own stays here: `test`, `Lint`, the smoke test (three commands in `pr.yml`), and the inputs and secrets each module takes.
+- No `GitVersion.yml` or `trivy.yaml` here: the modules read yggdrasil's defaults, so a change to them reaches this repo with the next pin bump. `make scan` passes the default's one skip rule as a flag (TJ, 2026-11-06).
 - Dependabot checks the pinned actions daily, and proposes a release only once it is three days old, as yggdrasil's record 0023 asks of every consumer.
 - The switch is three PRs: PR checks, then auto-merge and the weekly scan, then the release.
 
@@ -25,6 +26,7 @@ This repo's workflows were the source most of zimmertr/yggdrasil's modules were 
 ## Alternatives rejected
 
 - Keeping this repo's own copies: every fix lands twice, and the copies drift.
+- Keeping `trivy.yaml` for `make scan`: the CI gate would then read this repo's copy and miss a change to the default. A drifted flag in the Makefile misleads only a local scan.
 - One PR for the whole switch: a failure would be hard to pin down, and so would the rollback.
 
 ## Consequences
