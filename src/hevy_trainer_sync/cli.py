@@ -175,7 +175,8 @@ def main(argv: list[str] | None = None) -> int:
         if send_to_device(database_url, dashboard, to_push) != 0:
             return 1
 
-    # The calendar, opt-in: puts the next workout on today's date (see schedule.py).
+    # The calendar, opt-in in code and on in the cluster: the next workout on
+    # today's date and nothing else, which is how it reaches the watch (schedule.py).
     if not database_url or next_template is None or os.environ.get("SCHEDULE_NEXT", "0") != "1":
         return 0
     next_id = managed.get(build.title_from_key(next_template["key"]))
@@ -199,5 +200,5 @@ def main(argv: list[str] | None = None) -> int:
         if not r.get("ok"):
             return 1
     else:
-        log.info("calendar already has a workout on %s", today)
+        log.info("calendar already has %s on %s", build.title_from_key(next_template["key"]), today)
     return 0
