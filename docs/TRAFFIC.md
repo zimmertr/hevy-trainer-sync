@@ -34,12 +34,13 @@ A run with nothing to do makes about six Hevy calls, the dashboard login and one
 | Garmin `GET /activitylist-service/activities/search/activities` | Same | 1 per minute until the watch syncs, then none |
 | hevy2garmin `POST /api/cron/webhook` | Once the watch activity is found | One a session, again after 30 minutes only if the merge never landed |
 | hevy2garmin `POST /api/login`, `POST /api/routines/sync` with no ids | Only when Garmin answers 401 | 0 or 2 |
+| Kubernetes `GET` the CronJob, `POST` a Job | Once per poll that finds a workout saved since the poller started, with `RUN_CRONJOB` set | Usually one or two a session |
 
 hevy2garmin's first attempt after the webhook call finds the same activity, merges and stops. A workout the watch never recorded costs one Garmin list a minute for 48 hours, then nothing.
 
 ## Per day
 
-The poller makes 1,440 event reads a day, plus a Garmin activity list a minute for the few minutes between Finish in Hevy and the watch's sync. The CronJob runs 24 times a day. In a week, hevy2garmin makes about one calendar change a day for this tool, and its own calls to rebuild the workouts after each session and on Monday. This tool sends no device messages.
+The poller makes 1,440 event reads a day, plus a Garmin activity list a minute for the few minutes between Finish in Hevy and the watch's sync. The CronJob runs 24 times a day, plus once or twice after each session. In a week, hevy2garmin makes about one calendar change a day for this tool, and its own calls to rebuild the workouts after each session and on Monday. This tool sends no device messages.
 
 ## Identity and caching
 

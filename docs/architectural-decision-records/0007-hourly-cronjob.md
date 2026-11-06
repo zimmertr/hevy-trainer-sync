@@ -1,6 +1,6 @@
 # 0007. The mirror runs hourly as a Kubernetes CronJob
 
-- Status: Accepted
+- Status: Accepted. Amended by 0041
 - Date: 2026-11-04 (git: the merge of KM#1818)
 - Decider: TJ (git: merger of KM#1818)
 - Issues and PRs: KM#1818

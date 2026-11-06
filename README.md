@@ -43,6 +43,7 @@ Everything is environment variables.
 | `TZ` | `UTC` | Which day "today" is for the calendar |
 | `CRON_SECRET` | | hevy2garmin's cron secret, for `poll` |
 | `POLL_SECONDS` | `60` | How often `poll` checks Hevy |
+| `RUN_CRONJOB` | | A CronJob for `poll` to run as soon as a workout is saved, so the next workout is on the calendar right after a session. I set `hevy-trainer-sync` |
 
 Flags: `--dry-run` reads everything and writes nothing to Hevy or hevy2garmin (the session token is still refreshed). `--force` pushes every managed routine to Garmin even if nothing changed.
 
