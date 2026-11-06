@@ -3,7 +3,7 @@ name: PR Title
 # The PR title becomes the squash commit's title, and that line alone decides
 # the release bump. This refuses a title the release cannot read, before the
 # merge rather than after it. yggdrasil's pr-title module, which allows the
-# same types as GitVersion.yml. Decision record 0038.
+# same types as the release module's GitVersion rules. Decision record 0038.
 #
 # A workflow of its own, because it has to run when only the title changes
 # (`edited`), and an edit must not rerun the tests. `synchronize` stays in the
