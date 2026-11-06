@@ -1,6 +1,7 @@
-"""Send a Garmin workout to the watch, the way Garmin Connect's button does.
+"""Send a Garmin workout to the watch, the way Garmin Connect's button does,
+and list the activities the poller looks through for the watch's recording.
 
-Two undocumented connectapi calls that python-garminconnect, garmin_mcp and
+Undocumented connectapi calls that python-garminconnect, garmin_mcp and
 gccli all implement. Authenticated with the DI bearer token hevy2garmin holds
 (see db.py), sent with the native Android headers garmin-auth sends, because
 connectapi answers differently to a bare bearer. No refresh here: the token
@@ -54,6 +55,12 @@ class Garmin:
         if not device_id:
             raise RuntimeError(f"Garmin reported no last-used device: {str(body)[:200]}")
         return int(device_id)
+
+    def activities(self, start_date: str, end_date: str) -> list[dict]:
+        """Activities Garmin holds between two YYYY-MM-DD dates, the list hevy2garmin's merge searches."""
+        body, _ = request("GET", f"{BASE}/activitylist-service/activities/search/activities", headers=self._h,
+                          query={"startDate": start_date, "endDate": end_date, "limit": 50, "start": 0})
+        return body if isinstance(body, list) else []
 
     def send_workout(self, workout_id: str, name: str, device_id: int | str) -> None:
         request("POST", f"{BASE}/device-service/devicemessage/messages", headers=self._h,
