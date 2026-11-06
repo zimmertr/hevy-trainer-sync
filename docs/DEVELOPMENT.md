@@ -5,7 +5,7 @@ CI is the test runner. Push a branch, open a draft PR, and read the `test` job. 
 ## The loop
 
 1. Branch from the latest `main`.
-2. Write the change and its tests together. Every change ships with tests, and coverage stays at 100% of lines and branches. Record: [0018](architectural-decision-records/0018-full-coverage.md).
+2. Write the change and its tests together. Every change ships with tests. Coverage aims at 100% of lines and branches, and a gap gets a test or a written reason, never a test that only runs the line. Record: [0032](architectural-decision-records/0032-coverage-aims-at-100.md).
 3. Commit early, push, and open a draft PR. The `test` job runs on every push to it. Title the PR `type(scope): summary`, because the title picks the release version and the `PR Title` check fails anything else ([CICD.md](CICD.md#conventions)).
 4. Read the result:
 
@@ -14,7 +14,7 @@ CI is the test runner. Push a branch, open a draft PR, and read the `test` job. 
    gh run view <run-id> --log
    ```
 
-   The coverage table is at the end of the `test` job's log, with the missing lines and branches for any file under 100%.
+   The coverage table is in the `test` job's summary and at the end of its log, with the missing lines and branches for any file under 100%.
 5. Update the docs the change makes untrue, and add a decision record for any decision, in the same PR ([architectural-decision-records/README.md](architectural-decision-records/README.md)).
 6. Mark the PR ready. Resolve every conversation on it, because main will not merge with one open. After TJ approves, it is squash-merged, which releases it, and [CICD.md](CICD.md) takes over.
 
@@ -24,7 +24,7 @@ Only when CI is not enough, for example to iterate on one failing test. Every ch
 
 | Target | What it runs |
 |---|---|
-| `make test` | The suite under coverage, failing below 100%, as the `test` job does |
+| `make test` | The suite under coverage, with its report, as the `test` job runs it |
 | `make test-one MODULE=tests.test_build` | One module, verbose |
 | `make lint` | ruff under `ruff.toml`, as the `Lint` job does |
 | `make lint-docker` | hadolint on the `Dockerfile`, as the `Docker Build` job does first |
@@ -46,7 +46,7 @@ docker run --rm -v "$PWD":/repo -w /repo python:3.13-slim sh -c '
 - `unittest` and `unittest.mock` only. No pytest, no new runtime dependencies.
 - No network and no database. Patch `urllib.request.urlopen` to test `http.py`, patch each client module's `request` to test the clients, and fake `psycopg` for `db.py`.
 - Assert behaviour: the request that was sent, the payload, the exit code, the log line when the log line is the behaviour. A test that only executes a line does not count.
-- The only coverage exclusion is the `if __name__ == "__main__":` idiom. Anything else that seems untestable is a design problem to raise, not a pragma to add.
+- The only coverage exclusion is the `if __name__ == "__main__":` idiom. Anything else that seems untestable is a design problem to raise, not a pragma to add. A gap that stays gets its reason written beside the code.
 - Fixtures cut from real responses lose their tokens, ids and personal data first. The repo is public.
 
 ## Building the image
