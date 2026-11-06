@@ -1,6 +1,6 @@
 # 0024. Main is protected the way Bluebird's is, with Bluebird's Copilot review ruleset
 
-- Status: Accepted
+- Status: Accepted; its Copilot review ruleset is removed by [0033](0033-no-copilot-review-ruleset.md)
 - Date: 2026-11-05
 - Decider: TJ ("Set up branch protection, dependabot scanning for the repo, and github security scanning. Just like Bluebird."), and, the same day, the Copilot review ruleset
 - Issues and PRs: #35
