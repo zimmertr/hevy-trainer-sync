@@ -6,11 +6,18 @@ on:
   pull_request:
   workflow_call:
 
+# Its own group, since the caller's `release` group would deadlock a called
+# workflow. A PR run is replaced by a newer push; a release run never is.
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
 
 jobs:
   test:
+    name: test
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

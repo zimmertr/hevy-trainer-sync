@@ -20,7 +20,8 @@ permissions: {}
 jobs:
   # The squash commit, tested as merged before anything is built from it.
   test:
-    uses: ./.github/workflows/test.yml
+    # actionlint (required too) rejects the `$/` form zizmor prefers.
+    uses: ./.github/workflows/test.yml # zizmor: ignore[self-repository]
     permissions:
       contents: read
 
