@@ -1,9 +1,9 @@
 name: Dependabot auto-merge
 
-# Bluebird's workflow. Patch-level Dependabot version updates merge themselves
-# once main's required checks pass, then release and deploy like any other
-# merge. Minor and major updates, and digest-only base image updates, wait for
-# TJ. Decision record 0025.
+# Bluebird's workflow. Patch and minor Dependabot version updates merge
+# themselves once main's required checks pass, then release and deploy like any
+# other merge. Major updates, and digest-only base image updates, wait for TJ.
+# Decision records 0025 and 0037.
 #
 # Runs on every PR; the job is skipped for any actor but Dependabot.
 on: pull_request
@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   auto-merge:
-    name: Auto-merge patch updates
+    name: Auto-merge patch and minor updates
     runs-on: ubuntu-latest
     timeout-minutes: 5
     if: ${{ github.actor == 'dependabot[bot]' }}
@@ -33,8 +33,8 @@ jobs:
       # Squash, the only merge this repo allows. GitHub completes it once the
       # required checks pass and every conversation on it is
       # resolved.
-      - name: Enable auto-merge for patch updates
-        if: ${{ steps.metadata.outputs.update-type == 'version-update:semver-patch' }}
+      - name: Enable auto-merge for patch and minor updates
+        if: ${{ contains(fromJSON('["version-update:semver-patch", "version-update:semver-minor"]'), steps.metadata.outputs.update-type) }}
         run: gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
@@ -44,7 +44,7 @@ jobs:
       # being something to infer afterwards. Marker-guarded: Dependabot's
       # rebases rerun this job, and reruns must not stack duplicates.
       - name: Comment that auto-merge is armed
-        if: ${{ steps.metadata.outputs.update-type == 'version-update:semver-patch' }}
+        if: ${{ contains(fromJSON('["version-update:semver-patch", "version-update:semver-minor"]'), steps.metadata.outputs.update-type) }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
@@ -58,7 +58,7 @@ jobs:
             "$MARKER" \
             "### Auto-merge armed" \
             "" \
-            "This is a patch-level update, so it merges itself once the required checks pass and its conversations are resolved, then releases and deploys through the normal pipeline. Minor and major updates wait for review." \
+            "This is a patch or minor update, so it merges itself once the required checks pass and its conversations are resolved, then releases and deploys through the normal pipeline. Major updates wait for review." \
             "" \
             "To stop it, run \`gh pr merge --disable-auto\` on this PR, or close it.")
           gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" -f body="$BODY" >/dev/null

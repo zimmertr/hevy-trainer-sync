@@ -1,15 +1,15 @@
 version: 2
 # Bluebird's set, for this repo's three ecosystems. Every title is
 # `build(deps): ...` or `build(deps-dev): ...`, which the PR Title check and
-# GitVersion read as a patch. Patch-level version updates merge themselves
-# (dependabot-auto-merge.yml); everything else waits for review. Decision
-# records 0023 and 0025.
+# GitVersion read as a patch. Patch and minor version updates merge
+# themselves (dependabot-auto-merge.yml); everything else waits for review.
+# Decision records 0023, 0025 and 0037.
 updates:
   # requirements.in and requirements-dev.in, whose hashed locks Dependabot
   # recompiles with pip-compile (decision record 0036). Seven days after a release
-  # before proposing it: a patch merges itself and a merge deploys, so without
-  # the wait a release published the day before the weekly run would be live
-  # that morning. Security updates do not wait; GitHub documents cooldown as
+  # before proposing it: a patch or minor merges itself and a merge deploys, so
+  # without the wait a release published the day before the weekly run would be
+  # live that morning. Security updates do not wait; GitHub documents cooldown as
   # version updates only.
   - package-ecosystem: pip
     directory: /

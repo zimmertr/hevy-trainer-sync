@@ -13,7 +13,7 @@ How a change travels from a pull request to the CronJob in the cluster.
 | Docker Hub `zimmertr/hevy-trainer-sync` | Image registry. Tags are release versions, such as `0.1.0`. Builds before 0.1.0 are tagged with their commit SHA. Tags are immutable (rule `.*`): a pushed tag can't be overwritten or deleted. Record: [0031](architectural-decision-records/0031-immutable-image-tags.md) |
 | Kubernetes-Manifests `misc/hevy2garmin` | The CronJob, the poller Deployment, the PVC, and the pinned tag in `kustomization.yml`. One `images` entry sets the tag for both |
 | Argo CD application `hevy2garmin` (namespace `argo-system`) | Applies Kubernetes-Manifests main to the cluster |
-| Dependabot | Weekly version PRs for pip, Actions and the base image, plus security updates. Patch updates merge themselves |
+| Dependabot | Weekly version PRs for pip, Actions and the base image, plus security updates. Patch and minor updates merge themselves |
 | GitHub code scanning | CodeQL on every PR and push, and the weekly Trivy scan of the released image, in the Security tab |
 
 ## Conventions
@@ -83,7 +83,7 @@ Main takes changes only through a PR, for admins too. Before the merge button wo
 
 Every Monday Dependabot checks `requirements.in` and `requirements-dev.in`, recompiling their hashed locks (holding back any release younger than seven days; record [0036](architectural-decision-records/0036-hashed-locks.md)), the pinned actions, and the base image digest. It titles each PR `build(deps):` or `build(deps-dev):`, so each one releases a patch. Security updates arrive whenever GitHub publishes an advisory, without the cooldown.
 
-`dependabot-auto-merge.yml` arms squash auto-merge on a **patch-level** version update and comments on the PR to say so. GitHub merges it once the two checks pass and its conversations are resolved, and the merge releases and deploys like any other. A minor, a major, or a digest-only base image update waits for TJ. To stop one, run `gh pr merge --disable-auto` on it, or close it. Record: [0025](architectural-decision-records/0025-dependabot-with-patch-auto-merge.md).
+`dependabot-auto-merge.yml` arms squash auto-merge on a **patch or minor** version update and comments on the PR to say so. GitHub merges it once the two checks pass and its conversations are resolved, and the merge releases and deploys like any other. A major or a digest-only base image update waits for TJ. Dependabot reads a calendar-versioned package's year change, such as tzdata 2025.2 to 2026.6, as a major. To stop one, run `gh pr merge --disable-auto` on it, or close it. Records: [0025](architectural-decision-records/0025-dependabot-with-patch-auto-merge.md), [0037](architectural-decision-records/0037-minor-updates-merge-themselves.md).
 
 ## The weekly image scan
 

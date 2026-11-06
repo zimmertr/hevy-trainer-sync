@@ -1,6 +1,6 @@
 # 0025. Dependabot watches pip, Docker and Actions, and patch updates merge themselves
 
-- Status: Accepted. Narrows the approval rule of 0005
+- Status: Accepted. Narrows the approval rule of 0005; minor updates were added to the self-merge by [0037](0037-minor-updates-merge-themselves.md)
 - Date: 2026-11-05
 - Decider: TJ ("dependabot scanning for the repo ... Just like Bluebird", then "Yes, like Bluebird" to auto-merging patch updates, and to using the PAT in `secrets.json` as `AUTO_MERGE_PAT`)
 - Issues and PRs: #35

@@ -44,7 +44,7 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0022](0022-scan-before-production.md) | Production moves only onto a scanned image, and the image takes Debian's fixes at build time | 2026-11-05 | Accepted; amended by 0034 |
 | [0023](0023-pinned-actions-and-attestations.md) | Every action is pinned to a commit, and the image carries an SBOM and provenance | 2026-11-05 | Accepted. No-auto-merge consequence superseded by 0025 |
 | [0024](0024-branch-protection.md) | Main is protected the way Bluebird's is, with Bluebird's Copilot review ruleset | 2026-11-05 | Accepted; ruleset removed by 0033 |
-| [0025](0025-dependabot-with-patch-auto-merge.md) | Dependabot watches pip, Docker and Actions, and patch updates merge themselves | 2026-11-05 | Accepted. Narrows 0005 |
+| [0025](0025-dependabot-with-patch-auto-merge.md) | Dependabot watches pip, Docker and Actions, and patch updates merge themselves | 2026-11-05 | Accepted. Narrows 0005; amended by 0037 |
 | [0026](0026-security-scanning.md) | GitHub's security scanning is on, and the released image is re-scanned weekly | 2026-11-05 | Accepted |
 | [0027](0027-shared-create-issue-skill.md) | The create-issue skill is shared from zimmertr/ai-config, and this repo's specifics live in CLAUDE.md | 2026-11-05 | Accepted |
 | [0028](0028-records-in-architectural-decision-records.md) | Decision records live in `docs/architectural-decision-records/`, the name every new project uses | 2026-11-05 | Accepted |
@@ -56,3 +56,4 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0034](0034-upgrade-after-a-per-build-argument.md) | The apt upgrade layer sits after a build argument that changes on every build | 2026-11-05 | Accepted |
 | [0035](0035-a-polite-client.md) | Every call names this tool, and a 429 is waited out once | 2026-11-05 | Accepted |
 | [0036](0036-hashed-locks.md) | The image installs a hashed lock compiled from its direct pins | 2026-11-05 | Accepted |
+| [0037](0037-minor-updates-merge-themselves.md) | Dependabot's minor updates merge themselves too | 2026-11-05 | Accepted. Amends 0025 |
