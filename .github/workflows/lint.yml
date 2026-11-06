@@ -5,9 +5,9 @@ name: Lint
 # (the Dockerfile here already carries one).
 #
 # Not the `Lint` job in pr.yml, which runs ruff. Branch protection requires
-# `Lint / actionlint`, `Lint / zizmor` and
-# `Lint / semgrep` (this job's name, then the module's); renaming either
-# strands PRs on a check that never reports.
+# `Lint / actionlint`, `Lint / zizmor` and `Lint / semgrep` (this job's name,
+# then the module's); renaming either strands PRs on a check that never
+# reports.
 on:
   pull_request:
     branches:
