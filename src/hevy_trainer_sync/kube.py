@@ -20,7 +20,7 @@ def _read(path: str) -> str:
 
 
 def job_from(cronjob: dict) -> dict:
-    """A Job built from a CronJob's template, owned by it like kubectl's, so the CronJob's history limit cleans it up."""
+    """A Job from a CronJob's template, owned by it as kubectl's are, so the CronJob's history limit cleans it up."""
     meta = cronjob["metadata"]
     return {
         "apiVersion": "batch/v1",
