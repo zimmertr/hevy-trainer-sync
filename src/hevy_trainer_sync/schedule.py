@@ -1,10 +1,12 @@
 """Decide what to do with the Garmin calendar. Pure, so the tests cover it.
 
-Trainer has no days, only "next". Putting the next workout on today's date is
-what makes the watch offer it as today's workout and, more importantly, what
-makes Garmin push it to the watch at all: a workout that only sits in the
-library needs Send to Device by hand, and hevy2garmin recreates the Garmin
-workout whenever its content changes, which drops that association.
+The calendar is how workouts reach the watch. Garmin keeps calendar workouts
+in step with the watch, so a workout that is rebuilt or taken off the calendar
+is replaced or removed there too. Send to Device only ever adds, and every
+copy it sent stayed on the watch. Decision record 0040.
+
+Trainer has no days, only "next", so the calendar holds exactly one planned
+workout of this tool's: the next one, on today's date.
 """
 
 from dataclasses import dataclass, field
@@ -25,15 +27,19 @@ class Plan:
 def plan(rows: list[tuple[str, str, str | None]], next_routine_id: str, today: str) -> Plan:
     """`rows` are (routine_id, schedule_id, date) for every managed routine.
 
-    A past entry for the routine that is still "next" was never done, so it
-    comes off the calendar instead of lingering as a missed workout. A past
-    entry for any other routine was done (Trainer moved on), and stays, since
-    Garmin links it to the activity. Nothing is scheduled twice on one day,
-    including the day a session was just finished.
+    Every entry except the next workout on today comes off. A missed day moves
+    the entry to today. A finished session's entry comes off too: the
+    activity stays on the calendar on its own, and hevy2garmin re-books today's
+    entries onto a workout it rebuilds, so the entry would otherwise turn back
+    into a planned workout that never gets done. With it gone, the next
+    workout goes on today at once and reaches the watch at its next sync.
     """
     out = Plan()
+    kept = False
     for routine_id, schedule_id, date in rows:
-        if date and date < today and routine_id == next_routine_id:
-            out.unschedule.append((routine_id, schedule_id))
-    out.schedule = not any(date == today for _, _, date in rows)
+        if routine_id == next_routine_id and date == today and not kept:
+            kept = True
+            continue
+        out.unschedule.append((routine_id, schedule_id))
+    out.schedule = not kept
     return out

@@ -13,13 +13,16 @@ Nothing calls this tool. [CICD.md](CICD.md) covers how it gets deployed. This pa
 | 5 | Hevy public `POST /v1/routine_folders` | Only when the folder is missing | 0 or 1 |
 | 6 | Hevy public `GET /v1/routines` | Every run | 1 or more pages |
 | 7 | Hevy public `POST /v1/routines` or `PUT /v1/routines/{id}` | Per template that changed | 0 to one per template |
-| 8 | hevy2garmin `POST /api/login`, `POST /api/routines/sync` | Only when a routine changed, or `--force` | 0 or 2 |
+| 8 | hevy2garmin `POST /api/login`, then `POST /api/routines/sync` | The login every run; the sync only when a routine changed, or `--force` | 1 or 2 |
 | 9 | Postgres, two `SELECT`s | Only when step 8 ran and `DATABASE_URL` is set | 0 or 2 |
-| 10 | Garmin `GET /device-service/deviceservice/mylastused` | Same as 9, unless `GARMIN_DEVICE_ID` is set | 0 or 1 |
-| 11 | Garmin `POST /device-service/devicemessage/messages` | Per changed routine | 0 to one per template |
+| 10 | Garmin `GET /device-service/deviceservice/mylastused` | Same as 9, with `SEND_TO_DEVICE=1` (off in the cluster), unless `GARMIN_DEVICE_ID` is set | 0 or 1 |
+| 11 | Garmin `POST /device-service/devicemessage/messages` | Per changed routine, with `SEND_TO_DEVICE=1` | 0 to one per template |
 | 12 | hevy2garmin `POST /api/routines/sync` with no ids | Only when Garmin answers 401 at step 10 | 0 or 1 |
+| 13 | Postgres, `SELECT` on `routine_schedules` | Every run, with `SCHEDULE_NEXT=1` | 1 |
+| 14 | hevy2garmin `POST /api/routines/{id}/unschedule` | Per calendar entry other than the next workout on today | Usually 0; 1 after a session or a skipped day |
+| 15 | hevy2garmin `POST /api/routines/{id}/schedule` | When the next workout isn't on today yet | Usually 0; 1 a day |
 
-A run with nothing to do makes about six Hevy calls and nothing else. hevy2garmin then makes its own Garmin calls for step 8; see its source.
+A run with nothing to do makes about six Hevy calls, the dashboard login and one database read. hevy2garmin then makes its own Garmin calls for step 8; see its source.
 
 ## The poller
 
@@ -36,7 +39,7 @@ hevy2garmin's first attempt after the webhook call finds the same activity, merg
 
 ## Per day
 
-The poller makes 1,440 event reads a day, plus a Garmin activity list a minute for the few minutes between Finish in Hevy and the watch's sync. The CronJob runs 24 times a day. In a week with two workouts and one Monday rename, Garmin sees roughly six device messages and six last-used lookups from this tool, and hevy2garmin makes its own calls to rebuild those workouts.
+The poller makes 1,440 event reads a day, plus a Garmin activity list a minute for the few minutes between Finish in Hevy and the watch's sync. The CronJob runs 24 times a day. In a week, hevy2garmin makes about one calendar change a day for this tool, and its own calls to rebuild the workouts after each session and on Monday. This tool sends no device messages.
 
 ## Identity and caching
 

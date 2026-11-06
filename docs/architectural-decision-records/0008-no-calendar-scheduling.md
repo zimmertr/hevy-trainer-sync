@@ -1,6 +1,6 @@
 # 0008. Workouts are not scheduled on the Garmin calendar
 
-- Status: Accepted
+- Status: Superseded by 0040
 - Date: 2026-11-04 (conversation); the step became opt-in in #17, merged 2026-11-05
 - Decider: TJ ("Can't we just delete and recreate without scheduling though? And then automatically send to device?")
 - Issues and PRs: #4, #8, #17

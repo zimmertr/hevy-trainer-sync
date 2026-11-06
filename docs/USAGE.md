@@ -5,11 +5,11 @@ Once it is deployed there is nothing to run. This page is what you see, what you
 ## A normal week
 
 - **In Hevy**, the folder `Hevy Trainer` holds one routine per Trainer template, named for the program week: `Upper W8`, `Lower W8`. Don't edit them; the next run overwrites them. Don't delete them either: hevy2garmin needs them to keep the watch's copy. Record: [0014](architectural-decision-records/0014-routines-stay-in-hevy.md).
-- **On the watch**, the same names appear under Workouts after the phone next syncs. Nothing is on the calendar. Record: [0008](architectural-decision-records/0008-no-calendar-scheduling.md).
-- **To train**, start Trainer's workout in Hevy on the phone, and on the watch start the matching workout from the Workouts list. The watch walks you through the planned exercises and sets. Log the real reps and weights in Hevy as usual.
+- **On the watch**, Trainer's next workout is on today's date in the training calendar after the phone next syncs, and it's the only one this tool puts there. When the routine changes, the watch gets the new version in its place, not a second copy. Record: [0040](architectural-decision-records/0040-the-calendar-carries-workouts-to-the-watch.md).
+- **To train**, start Trainer's workout in Hevy on the phone, and on the watch start today's workout from the calendar. The watch walks you through the planned exercises and sets. Log the real reps and weights in Hevy as usual.
 - **During the session**, what the watch records is what Strava keeps, forever. Follow the planned sets, and if you change a weight or do different reps, enter it on the watch as well as in Hevy. Record: [0020](architectural-decision-records/0020-the-watch-recording-is-what-strava-keeps.md).
 - **After you finish**, there is nothing to do. The watch's activity reaches Garmin and Strava at its next phone sync, however late that is. The poller waits for it, then has hevy2garmin merge Hevy's sets into it, so Garmin Connect has them within a minute or two. Strava does not change, and nothing else is ever posted. A session the watch didn't record stays in Hevy only. Don't press Sync Now on the dashboard: it would upload that session, or one the watch hasn't synced yet, as a second activity. Records: [0001](architectural-decision-records/0001-merge-into-the-watch-activity.md), [0039](architectural-decision-records/0039-merge-only-after-the-watch-activity.md).
-- **Within the hour**, the routine you just trained is updated with the weights you lifted, and the watch gets the new copy at its next sync.
+- **Within the hour**, the routine you just trained is updated with the weights you lifted, and the next workout goes on today's date, so the watch has it at its next sync.
 - **On Monday**, the routines are renamed for the new week, `W9` and so on, and reach the watch the same way. Record: [0010](architectural-decision-records/0010-program-week-in-names.md).
 
 ## Is it working?
@@ -41,7 +41,8 @@ For each workout the poller logs `saved; waiting for the watch's activity on Gar
 | `X is not set` | A required variable is missing | See [CONFIGURATION.md](CONFIGURATION.md) |
 | `HTTP 400 from https://api.hevyapp.com/v1/routines/...` | Hevy rejected a routine payload | File a bug with the log; the payload shape is pinned in `test_build.py` |
 | `hevy2garmin: ... failed=N` | hevy2garmin could not build the Garmin workout | Open the dashboard's Routines page for the error |
-| `send to device failed for ...` | Garmin refused the device message | The workout is still in Garmin Connect; Send to Device there works by hand. File a bug with the log |
+| `send to device failed for ...` | Garmin refused the device message. Only with `SEND_TO_DEVICE=1`, which the cluster no longer sets | The workout is still in Garmin Connect; Send to Device there works by hand. File a bug with the log |
+| `scheduled ... on ...: <error>` | hevy2garmin could not put the next workout on the calendar | Open the dashboard's Routines page for the error. The next hourly run tries again |
 | `reading Hevy workout events failed` (poller) | Hevy's public API is down, the key is wrong, or the cluster could not reach it (`<urlopen error ...>`) | Nothing; the poller retries every minute and catches up |
 | `checking the waiting workouts failed` (poller) | The database, Garmin or the dashboard did not answer, or `CRON_SECRET` does not match | Nothing, if it clears; the poller tries again every minute. If it repeats, check the dashboard pod, its database and the secret |
 | `no watch activity turned up for ... in 2 days, 0:00:00` (poller) | The watch didn't record the session, or never synced it | Nothing. The session stays in Hevy only |

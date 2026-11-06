@@ -9,11 +9,9 @@ This job closes the gap. Every run it:
 1. Reads the Trainer program from Hevy's private API (the endpoint the app itself uses, catalogued in [hevy-mcp-unofficial](https://github.com/LovelessCodes/hevy-mcp-unofficial)).
 2. Writes one Hevy routine per program template into a folder called `Hevy Trainer`, through the public API, named for the program week: `Upper W8` is the eighth week since the program started, which is what the app's cycle and week multiply out to. The name on the watch is the quickest way to see a run didn't land. Sets, rep ranges, warm-ups and rest times come from Trainer; working weights come from your last logged session of each exercise.
 3. Tells your hevy2garmin dashboard to push the routines that changed to Garmin.
-4. Sends each new Garmin workout to the watch, the way Garmin Connect's Send to Device button does. hevy2garmin recreates the Garmin workout whenever a routine changes, and the new copy isn't on the watch until something sends it. The watch downloads it at its next phone sync. This uses the Garmin session hevy2garmin holds, read from its Postgres, so Garmin never sees a second login.
+4. Puts Trainer's next workout on today's date in the Garmin calendar and takes everything else it scheduled off, so there's one planned workout at a time. That's how it gets to the watch: Garmin keeps calendar workouts in step with the watch, so when hevy2garmin rebuilds a workout after a routine changes, the watch gets the new one in place of the old. It used to send each workout with Send to Device instead, which only ever adds, and old copies piled up on the watch. That step is still there behind `SEND_TO_DEVICE`, but I run with it off.
 
 It has a second mode, `poll`, for the other direction. hevy2garmin holds a finished workout for two hours before merging it into Garmin Connect, and if the watch's activity still isn't there, it uploads one of its own, which Garmin then posts to Strava as a duplicate. `poll` reads Hevy's workout events every minute, waits until Garmin has the watch's activity for the workout, and only then calls hevy2garmin's webhook route, the same call Hevy's own webhook would make. hevy2garmin merges into the watch's activity on its first try, so Garmin Connect has the real sets a minute or two after the watch syncs, and nothing but the watch ever reaches Strava. A session the watch didn't record stays in Hevy. Strava never sees the merge, so the plan on the watch is still what makes Strava right. It runs inside the cluster, so nothing has to be reachable from the internet, and it never touches the Hevy session. I suspend hevy2garmin's own scheduled sync, since it's the thing that uploads.
-
-Optionally (`SCHEDULE_NEXT=1`) it also puts Trainer's next workout on today's date in the Garmin calendar. Off by default: it means a planned-workout entry on every day until you train.
 
 Start the workout from the watch's Training menu and every set is named before Garmin ever forwards it.
 
@@ -39,9 +37,9 @@ Everything is environment variables.
 | `FOLDER_TITLE` | `Hevy Trainer` | Routine folder to manage |
 | `WORKOUT_PAGES` | `4` | How many pages of ten workouts to scan for last weights |
 | `DATABASE_URL` | | hevy2garmin's Postgres, read-only: the Garmin workout ids and session for Send to Device, and calendar entry ids. Unset disables both steps. `poll` needs it for the Garmin session, the merge settings and which workouts are done. |
-| `SEND_TO_DEVICE` | `1` | Send each new Garmin workout to the watch |
+| `SEND_TO_DEVICE` | `1` | Send each new Garmin workout to the watch. I set `0`; it leaves old copies behind |
 | `GARMIN_DEVICE_ID` | last used | Which Garmin device to send to |
-| `SCHEDULE_NEXT` | `0` | Also put the next workout on today's Garmin calendar |
+| `SCHEDULE_NEXT` | `0` | Put the next workout on today's Garmin calendar, which is how it reaches the watch. I set `1` |
 | `TZ` | `UTC` | Which day "today" is for the calendar |
 | `CRON_SECRET` | | hevy2garmin's cron secret, for `poll` |
 | `POLL_SECONDS` | `60` | How often `poll` checks Hevy |

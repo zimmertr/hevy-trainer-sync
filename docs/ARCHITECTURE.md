@@ -14,8 +14,9 @@ flowchart LR
         J -->|POST /api/routines/sync| H[hevy2garmin]
         R -->|read| H
         H -->|delete stale, create| W[Garmin workout]
-        J -->|device message| W
-        W -->|next phone sync| F[Fenix]
+        J -->|schedule next on today| C[Garmin calendar]
+        W --> C
+        C -->|next phone sync| F[Fenix]
     end
 ```
 
@@ -62,8 +63,8 @@ It needs the public API key, the cron secret, the database and the dashboard pas
 4. **Folder.** The folder titled `FOLDER_TITLE` is found or created.
 5. **Routines.** For each template, `build.routine_from_template()` builds the payload, named by `build.title()` for the week from `build.program_week()`. An existing routine is matched by base title with `build.is_titled_from()`, compared with `build.normalize()`, and created, updated or left alone. Record: [0010](architectural-decision-records/0010-program-week-in-names.md).
 6. **Dashboard.** `h2g.Dashboard` logs in with `H2G_PASSWORD` and posts the changed routine ids (all of them with `--force`) to `POST /api/routines/sync`.
-7. **Send to Device.** With `DATABASE_URL` set, `db.garmin_workouts()` and `db.garmin_di_token()` read hevy2garmin's tables, and `garmin.Garmin.send_workout()` queues each new workout for the watch. Record: [0009](architectural-decision-records/0009-send-to-device-from-here.md).
-8. **Calendar.** Only with `SCHEDULE_NEXT=1`, which the deployment does not set. `schedule.plan()` decides what to unschedule and whether to schedule today. Record: [0008](architectural-decision-records/0008-no-calendar-scheduling.md).
+7. **Send to Device.** Only with `SEND_TO_DEVICE=1`, which the cluster no longer sets. With `DATABASE_URL` set, `db.garmin_workouts()` and `db.garmin_di_token()` read hevy2garmin's tables, and `garmin.Garmin.send_workout()` queues each new workout for the watch. Records: [0009](architectural-decision-records/0009-send-to-device-from-here.md), [0040](architectural-decision-records/0040-the-calendar-carries-workouts-to-the-watch.md).
+8. **Calendar.** With `SCHEDULE_NEXT=1`, which the cluster sets. Runs every hour, changed or not. `schedule.plan()` keeps one entry, the next workout on today in `TZ`, and has the dashboard unschedule every other entry of the managed routines and schedule today's if it's missing. Garmin carries the calendar to the watch. Record: [0040](architectural-decision-records/0040-the-calendar-carries-workouts-to-the-watch.md).
 
 `--dry-run` stops after step 5 without writing anything. The session is still refreshed, because reading the program needs a valid token.
 

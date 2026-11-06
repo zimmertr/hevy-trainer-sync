@@ -14,10 +14,10 @@ Everything is environment variables and two flags. There is no config file. The 
 | `FOLDER_TITLE` | `Hevy Trainer` | | `cli.py` | The routine folder this tool owns. Routines outside it are never touched |
 | `WORKOUT_PAGES` | `4` | | `cli.py` | Pages of ten workouts scanned for last weights |
 | `DATABASE_URL` | | For `poll` | `db` | hevy2garmin's Postgres, read-only. Unset turns off Send to Device and the calendar. The poller reads its Garmin token, merge settings and finished workouts |
-| `SEND_TO_DEVICE` | `1` | | `cli.py` | `1` sends each new Garmin workout to the watch; anything else skips it |
+| `SEND_TO_DEVICE` | `1` | | `cli.py` | `1` sends each new Garmin workout to the watch; anything else skips it. The cluster sets `0`. Record: [0040](architectural-decision-records/0040-the-calendar-carries-workouts-to-the-watch.md) |
 | `GARMIN_DEVICE_ID` | last-used device | | `cli.send_to_device` | The Garmin device to send to |
-| `SCHEDULE_NEXT` | `0` | | `cli.py` | `1` also puts the next workout on today's Garmin calendar. Record: [0008](architectural-decision-records/0008-no-calendar-scheduling.md) |
-| `TZ` | `UTC` | | `schedule.today_in` | Which day "today" is for the calendar |
+| `SCHEDULE_NEXT` | `0` | | `cli.py` | `1` puts the next workout on today's Garmin calendar and takes every other entry of the managed routines off. The cluster sets `1`. Record: [0040](architectural-decision-records/0040-the-calendar-carries-workouts-to-the-watch.md) |
+| `TZ` | `UTC` | | `schedule.today_in` | Which day "today" is for the calendar. The cluster sets `America/Los_Angeles` |
 | `CRON_SECRET` | | `poll` only | `poll.main` | hevy2garmin's cron secret, sent as a bearer to its webhook route |
 | `POLL_SECONDS` | `60` | | `poll.main` | How often `poll` reads Hevy's workout events |
 
@@ -44,6 +44,9 @@ Kubernetes-Manifests `misc/hevy2garmin/resources/trainer-sync.yml` sets:
 | `H2G_PASSWORD` | Secret `hevy2garmin`, key `password` |
 | `HEVY_STATE_FILE` | `/state/hevy-session.json` on PVC `hevy-trainer-sync-state` |
 | `DATABASE_URL` | Secret `hevy2garmin-database-app`, key `uri` |
+| `SCHEDULE_NEXT` | `1` |
+| `SEND_TO_DEVICE` | `0` |
+| `TZ` | `America/Los_Angeles` |
 
 Everything else takes its default.
 

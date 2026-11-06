@@ -1,6 +1,6 @@
 # hevy-trainer-sync
 
-Mirrors the Hevy Trainer program into Hevy routines, has hevy2garmin turn them into Garmin workouts, and sends those to the watch. One Python command, run hourly as a Kubernetes CronJob, plus a `poll` mode that runs as a Deployment and starts hevy2garmin's merge as soon as a workout is saved. Start with [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Mirrors the Hevy Trainer program into Hevy routines, has hevy2garmin turn them into Garmin workouts, and puts the next one on the Garmin calendar, which carries it to the watch. One Python command, run hourly as a Kubernetes CronJob, plus a `poll` mode that runs as a Deployment and starts hevy2garmin's merge as soon as a workout is saved. Start with [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Documentation
 
@@ -31,8 +31,8 @@ Every decision gets a record in the same PR that makes it, and the rule below th
 ## Rules
 
 - **The session has one owner.** The Hevy session is bootstrapped once from the whole `auth2.0-token` cookie and then lives only in `HEVY_STATE_FILE` on the PVC. Never refresh it from a second process, and never run the tool locally against the cluster's session. Record: [0006](docs/architectural-decision-records/0006-session-on-a-volume.md)
-- **hevy2garmin owns Garmin.** Never log in to Garmin and never refresh Garmin's token from here. Send to Device borrows hevy2garmin's token read-only from its database; on a 401, ask the dashboard to sync nothing and read the token again. Never write to hevy2garmin's tables. Record: [0009](docs/architectural-decision-records/0009-send-to-device-from-here.md)
-- **No calendar.** The calendar step stays off (`SCHEDULE_NEXT` unset). Record: [0008](docs/architectural-decision-records/0008-no-calendar-scheduling.md)
+- **hevy2garmin owns Garmin.** Never log in to Garmin and never refresh Garmin's token from here. Send to Device and the poller borrow hevy2garmin's token read-only from its database; on a 401, ask the dashboard to sync nothing and read the token again. Never write to hevy2garmin's tables. Record: [0009](docs/architectural-decision-records/0009-send-to-device-from-here.md)
+- **The calendar carries workouts to the watch.** The cluster sets `SCHEDULE_NEXT=1` and `SEND_TO_DEVICE=0`: one planned entry, Trainer's next workout on today, and every other entry of the managed routines comes off. Send to Device left a copy on the watch for every rebuild. Record: [0040](docs/architectural-decision-records/0040-the-calendar-carries-workouts-to-the-watch.md)
 - **Names carry the program week**, counted from the program's `created_at`, and existing routines are matched by base title so a rename updates in place. Record: [0010](docs/architectural-decision-records/0010-program-week-in-names.md)
 - **Nothing goes upstream yet.** No issue, PR or fork on drkostas/hevy2garmin until TJ says so; anything posted there is public. Record: [0015](docs/architectural-decision-records/0015-nothing-upstream-yet.md)
 - **Only touch the managed folder.** Routines outside `FOLDER_TITLE` are never read for matching or written.
