@@ -34,11 +34,14 @@ lint-docker:
 build:
 	docker build --build-arg APP_COMMIT=$$(git rev-parse HEAD) -t $(IMAGE) .
 
-# The release scan's rules (trivy.yaml, fixable Critical and High only) against
-# a local build. Exits non-zero when it finds one, as the release does.
+# The release scan's rules (fixable Critical and High only) against a local
+# build. Exits non-zero when it finds one, as the release does. The skip is the
+# one rule in yggdrasil's defaults/trivy.yaml, which CI reads: pip's vendored
+# SBOM is not inventory. Keep the two the same.
 scan: build
 	$(RUN) -v /var/run/docker.sock:/var/run/docker.sock $(TRIVY_IMAGE) image \
-	  --config trivy.yaml --ignore-unfixed --severity CRITICAL,HIGH --exit-code 1 $(IMAGE)
+	  --skip-files '**/pip/_vendor/bom.cdx.json' \
+	  --ignore-unfixed --severity CRITICAL,HIGH --exit-code 1 $(IMAGE)
 
 # Not a check: rewrites the two hashed locks from requirements.in and
 # requirements-dev.in, on the image's own Python. pip-compile keeps every pin
