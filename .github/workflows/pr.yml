@@ -60,6 +60,8 @@ jobs:
           push: false
           load: true
           tags: hevy-trainer-sync:pr-scan
+          # As the release passes it: the apt upgrade layer reruns per push.
+          build-args: APP_COMMIT=${{ github.event.pull_request.head.sha }}
 
       # The release scan's rules, so a PR sees what the release would refuse
       # before it merges: fixable only, the shared trivy.yaml, and a failure

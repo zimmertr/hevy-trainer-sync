@@ -28,7 +28,8 @@ Only when CI is not enough, for example to iterate on one failing test. Every ch
 | `make test-one MODULE=tests.test_build` | One module, verbose |
 | `make lint` | ruff under `ruff.toml`, as the `Lint` job does |
 | `make lint-docker` | hadolint on the `Dockerfile`, as the `Docker Build` job does first |
-| `make build` | `docker build -t hevy-trainer-sync:dev .` |
+| `make build` | `docker build -t hevy-trainer-sync:dev .`, with `APP_COMMIT` set to the checked-out commit |
+| `make lock` | Rewrites `requirements.txt` and `requirements-dev.txt`, with hashes, from their `.in` files. Run it after changing a pin, and commit both |
 | `make scan` | Builds, then scans the build with Trivy under `trivy.yaml`, failing on a fixable Critical or High, as the release does |
 
 The same suite without make:

@@ -34,9 +34,13 @@ Each webhook call starts up to ten of hevy2garmin's own merge-only attempts over
 
 The poller makes 1,440 event reads a day. The CronJob runs 24 times a day. In a week with two workouts and one Monday rename, Garmin sees roughly six device messages and six last-used lookups from this tool, and hevy2garmin makes its own calls to rebuild those workouts.
 
+## Identity and caching
+
+Every call names this tool in its `User-Agent` (`http.USER_AGENT`), except Garmin's, which carry the Android app's headers. Nothing caches a response: a run makes about six Hevy calls an hour and the poller one a minute, each asking for what changed since the last. Record: [0035](architectural-decision-records/0035-a-polite-client.md).
+
 ## Timeouts and retries
 
-HTTP calls time out after 30 seconds (`http.request`), except the dashboard: 300 seconds for a routine sync, which waits on Garmin, and 120 for schedule and unschedule. Postgres connections time out after 10 seconds. Nothing is retried except the program call after a Hevy refresh on a 401 and the one Garmin token refresh above. The poller does not retry within a poll either, but any failed call, network errors included, leaves its mark where it was, so the next poll asks again. A failed run waits for the next hour; `backoffLimit: 0` keeps Kubernetes from retrying a run that might have half-written routines.
+HTTP calls time out after 30 seconds (`http.request`), except the dashboard: 300 seconds for a routine sync, which waits on Garmin, and 120 for schedule and unschedule. Postgres connections time out after 10 seconds. A `429` with a `Retry-After` of at most 60 seconds is waited out and retried once (`http.MAX_RETRY_AFTER_S`); a longer wait, a missing header, or a second `429` fails the call. Nothing else is retried except the program call after a Hevy refresh on a 401 and the one Garmin token refresh above. Record: [0035](architectural-decision-records/0035-a-polite-client.md). The poller does not retry within a poll either, but any failed call, network errors included, leaves its mark where it was, so the next poll asks again. A failed run waits for the next hour; `backoffLimit: 0` keeps Kubernetes from retrying a run that might have half-written routines.
 
 ## Inbound
 

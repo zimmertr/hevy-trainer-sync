@@ -1,0 +1,7 @@
+# The image's lock, plus the test tools; `make lock` compiles
+# requirements-dev.txt from this file. Constrained to the image's lock, so the
+# suite runs against what ships. Decision record 0036.
+-c requirements.txt
+-r requirements.in
+# Test-only: line and branch coverage, reported in CI.
+coverage==7.17.2
