@@ -5,6 +5,8 @@ github.com/LovelessCodes/hevy-mcp-unofficial and were checked live on 4 Nov 2026
 Hevy can change or close them without notice.
 """
 
+import json
+import logging
 import time
 from datetime import UTC, datetime
 
@@ -14,6 +16,29 @@ BASE = "https://api.hevyapp.com"
 # A fixed key the hevy.com web client sends; it identifies the client, not the user.
 WEB_API_KEY = "shelobs_hevy_web"
 EPOCH = "1970-01-01T00:00:00.000Z"
+# Enough for every template's exercises; past it a list is cut short in the log.
+SHAPE_ITEMS = 30
+
+log = logging.getLogger("hevy-trainer-sync.trainer")
+
+
+def shape(value):
+    """The reply with every string hidden, so the log shows its structure and numbers but no ids, names or notes.
+
+    Trainer prescribes a weight for each session and the program alone has none
+    (#12). The same request also asks for the next workout, which this logs so
+    the weights can be found without reading the session from anywhere else.
+    """
+    if isinstance(value, dict):
+        return {k: shape(v) for k, v in value.items()}
+    if isinstance(value, list):
+        out = [shape(v) for v in value[:SHAPE_ITEMS]]
+        if len(value) > SHAPE_ITEMS:
+            out.append(f"{len(value) - SHAPE_ITEMS} more")
+        return out
+    if isinstance(value, str):
+        return "str"
+    return value
 
 
 class Session:
@@ -64,4 +89,5 @@ class Session:
             body, _ = request("GET", f"{BASE}/hevy_trainer/v3/program", headers=self._headers(), query=query)
         if not isinstance(body, dict) or not isinstance(body.get("program"), dict):
             raise RuntimeError(f"unexpected program response: {str(body)[:200]}")
+        log.info("trainer reply, strings hidden: %s", json.dumps(shape(body), separators=(",", ":")))
         return body["program"]
