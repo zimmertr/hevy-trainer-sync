@@ -17,6 +17,11 @@ on:
 
 permissions: {}
 
+# Two runs at once could both find no open issue and file it twice.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 jobs:
   check:
     name: Hevy App Check
