@@ -15,7 +15,7 @@ What each source can and cannot tell this tool, and every quirk found so far. Ea
 What each provider says about how it may be called, read on 2026-11-05.
 
 - **Hevy public API:** no published rate limit. The docs ask that a job updating hourly or daily not send its requests exactly at xx:00 but at a random minute instead, and warn the API may change or be abandoned. The CronJob runs at minute 7. The poller reads the events once a minute, which that request, about hourly and daily jobs, doesn't speak to. Hevy Pro only.
-- **Hevy private API:** undocumented, so no published terms or limits. Used for two calls a run, as the web app makes them, plus the older program endpoint while #12 is open.
+- **Hevy private API:** undocumented, so no published terms or limits. Used for two calls a run, as the web app makes them, plus the two preferences endpoints while #12 is open.
 - **Garmin Connect:** undocumented, with no published terms for this API. Called only after a routine changed.
 - **hevy2garmin:** TJ's own deployment. Its webhook route throttles past `WEBHOOK_MAX_INFLIGHT` (see below).
 
@@ -27,7 +27,10 @@ What each provider says about how it may be called, read on 2026-11-05.
 - **What it lacks**: weights, and any display title. The title comes from the key: the words before the frequency token (`upper_2x_a` is "Upper").
 - **The whole reply** (2026-11-06, logged by `get_program`): `program` and `status`, nothing else. No next workout and no weights anywhere, though the request asks for `client_next_workout_updated_at`. The program also has `schema_version`, `level`, `goal`, `equipments`, `weekly_frequency`, `updated_at`, `workout_duration_minutes`, `rest_timer_length`, `cardio_preference`, `split_type` and `deloads_enabled`; each exercise also has `id` and `kind`; each template has `name` and `edits`.
 - **`current_week` is not the app's week** (2026-11-04, again 2026-11-06): it read 5 while the app showed "Cycle 2 (6-Week Program)", week 2/6. Calendar weeks since `created_at` gave 8, which is neither, so the names' `W8` matches nothing the app shows. Record: [0010](architectural-decision-records/0010-program-week-in-names.md). Issue #14.
-- **The app's week and prescribed weights are worked out on the phone** (2026-11-06). The v3 reply has neither. hevy.com's Trainer page reads only the older `GET /hevy_trainer/program` and has no code for either. The app shows which exercises progress (a green "Weight" or "Reps" arrow) and the cycle week, so the rule is in the phone app. #12.
+- **The app's week and prescribed weights are worked out on the phone** (2026-11-06, read from the Android app 3.2.5). The v3 reply has neither, and hevy.com's Trainer page has no code for either. #12.
+  - **Week.** Calendar weeks since the program's `created_at`, each starting on the user's first weekday at local midnight, plus one. Cycle is `floor((week - 1) / n) + 1` and week of cycle is `(week - 1) % n + 1`, where `n` is 6, or 7 with `deloads_enabled`. Week 8 shows as "Cycle 2", week 2/6.
+  - **Weight.** From the last time the exercise was logged, its normal sets only: the base is their lowest weight. Fewer sets than the target: no change. Every set at or above the top of the rep range: base times 1.05. Every set below the bottom: base times 0.95. Otherwise no change. A deload week takes 60%. The rep range itself can move up or down a fixed ladder (4-6, 6-8, 8-12, 12-15, 15-20, 20-25, 25-30), which is the green "Reps" arrow in the app, so the program's `rep_range` is only the starting range.
+  - **Rounding** goes to a weight the user has: the dumbbells, bars and plates kept in Trainer's preferences, or a machine's increment (up for an increase, down for a decrease, nearest otherwise).
 - **`exercises_rotated_at`** read Thursday 29 Oct, so rotations do not fall on week boundaries.
 
 ## Hevy session (private)
