@@ -60,9 +60,10 @@ It needs the public API key, the cron secret, the database and the dashboard pas
 0. **Lock.** `state.locked()` holds an exclusive lock on `HEVY_STATE_FILE.lock` for the whole run, so a run the poller started and an hourly one never touch the session together. Record: [0041](architectural-decision-records/0041-run-the-mirror-after-each-save.md).
 1. **Session.** `state.load_or_bootstrap()` reads `HEVY_STATE_FILE`, or on the first run parses `HEVY_SESSION` and saves it at once. `hevy_private.Session` refreshes the access token when Hevy answers 401 and rewrites the file through its `persist` callback. Record: [0006](architectural-decision-records/0006-session-on-a-volume.md).
 2. **Program.** `Session.get_program()` calls `GET /hevy_trainer/v3/program`. Templates are sorted by `index`, and `next_workout_index` names the next one.
-3. **Weights.** `hevy_public.Client.recent_workouts()` reads the last `WORKOUT_PAGES` pages of workouts, and `build.last_weights()` keeps the last working-set weight per exercise.
+3. **Weights.** `hevy_public.Client.recent_workouts()` reads the last `WORKOUT_PAGES` pages of workouts, and `build.last_weights()` keeps the last working-set weight per exercise, the fallback for an exercise Trainer prescribes nothing for.
+3a. **Trainer's prescriptions.** `cli.trainer_plan()` reads the user's preferences (username, unit, first weekday), Trainer's preferences (the weights the user has) and, with `Session.workouts_since()`, every workout since the program started, each tagged with its Trainer template. `trainer_rules.calendar_week()` gives the week, cycle and week of cycle, and `build.plan()` gives each exercise's working weight, warm-ups or rep range by the app's rules, using `library.py` for its type and equipment. The log lists each one. Record: [0042](architectural-decision-records/0042-trainer-prescriptions-by-the-apps-rules.md).
 4. **Folder.** The folder titled `FOLDER_TITLE` is found or created.
-5. **Routines.** For each template, `build.routine_from_template()` builds the payload, named by `build.title()` for the week from `build.program_week()`. An existing routine is matched by base title with `build.is_titled_from()`, compared with `build.normalize()`, and created, updated or left alone. Record: [0010](architectural-decision-records/0010-program-week-in-names.md).
+5. **Routines.** For each template, `build.routine_from_template()` builds the payload, with Trainer's prescriptions, named by `build.title()` for the cycle and week (`Upper C2 W2`). An existing routine is matched by base title with `build.is_titled_from()`, compared with `build.normalize()`, and created, updated or left alone. Record: [0042](architectural-decision-records/0042-trainer-prescriptions-by-the-apps-rules.md).
 6. **Dashboard.** `h2g.Dashboard` logs in with `H2G_PASSWORD` and posts the changed routine ids (all of them with `--force`) to `POST /api/routines/sync`.
 7. **Send to Device.** Only with `SEND_TO_DEVICE=1`, which the cluster no longer sets. With `DATABASE_URL` set, `db.garmin_workouts()` and `db.garmin_di_token()` read hevy2garmin's tables, and `garmin.Garmin.send_workout()` queues each new workout for the watch. Records: [0009](architectural-decision-records/0009-send-to-device-from-here.md), [0040](architectural-decision-records/0040-the-calendar-carries-workouts-to-the-watch.md).
 8. **Calendar.** With `SCHEDULE_NEXT=1`, which the cluster sets. Runs every hour, changed or not. `schedule.plan()` keeps one entry, the next workout on today in `TZ`, and has the dashboard unschedule every other entry of the managed routines and schedule today's if it's missing. Garmin carries the calendar to the watch. Record: [0040](architectural-decision-records/0040-the-calendar-carries-workouts-to-the-watch.md).
@@ -78,12 +79,14 @@ It needs the public API key, the cron secret, the database and the dashboard pas
 | `match.py` | hevy2garmin's merge settings and its rules for matching a workout to a watch activity | None |
 | `state.py` | Bootstrap from the cookie, atomic save with mode 0600, the run lock | The state file |
 | `kube.py` | One Job from a CronJob, as the pod's service account | Kubernetes API |
-| `hevy_private.py` | Session refresh and the Trainer program | Hevy private API |
+| `hevy_private.py` | Session refresh, the Trainer program, both preferences, the user's workouts | Hevy private API |
 | `hevy_public.py` | Folders, routines, recent workouts | Hevy public API |
 | `h2g.py` | Dashboard login, routine sync, schedule and unschedule, and `trigger_merge` | hevy2garmin HTTP |
 | `db.py` | Read-only queries; `psycopg` is imported lazily | hevy2garmin Postgres |
 | `garmin.py` | Last-used device, the device message and the activity list | Garmin Connect |
-| `build.py` | Template to payload, names, weeks, comparison | None |
+| `build.py` | Template to payload, names, each exercise's prescription, comparison | None |
+| `trainer_rules.py` | Trainer's rules for the week, weights, rep ranges and warm-ups, as the app runs them | None |
+| `library.py` | The app's built-in exercise library, generated by `scripts/hevy_app.py` | None |
 | `schedule.py` | The calendar plan | None |
 | `http.py` | One `urllib` wrapper and `HttpError` | Every HTTP call |
 

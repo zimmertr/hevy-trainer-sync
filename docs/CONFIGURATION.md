@@ -12,12 +12,12 @@ Everything is environment variables and two flags. There is no config file. The 
 | `H2G_URL` | `http://hevy2garmin` | | `h2g.Dashboard`, `poll.main` | The hevy2garmin dashboard |
 | `H2G_PASSWORD` | | Unless `--dry-run`; always for `poll` | `h2g.Dashboard` | The dashboard's login password. The poller logs in only to have Garmin's token refreshed |
 | `FOLDER_TITLE` | `Hevy Trainer` | | `cli.py` | The routine folder this tool owns. Routines outside it are never touched |
-| `WORKOUT_PAGES` | `4` | | `cli.py` | Pages of ten workouts scanned for last weights |
+| `WORKOUT_PAGES` | `4` | | `cli.py` | Pages of ten workouts scanned for last weights, the fallback where Trainer prescribes nothing |
 | `DATABASE_URL` | | For `poll` | `db` | hevy2garmin's Postgres, read-only. Unset turns off Send to Device and the calendar. The poller reads its Garmin token, merge settings and finished workouts |
 | `SEND_TO_DEVICE` | `1` | | `cli.py` | `1` sends each new Garmin workout to the watch; anything else skips it. The cluster sets `0`. Record: [0040](architectural-decision-records/0040-the-calendar-carries-workouts-to-the-watch.md) |
 | `GARMIN_DEVICE_ID` | last-used device | | `cli.send_to_device` | The Garmin device to send to |
 | `SCHEDULE_NEXT` | `0` | | `cli.py` | `1` puts the next workout on today's Garmin calendar and takes every other entry of the managed routines off. The cluster sets `1`. Record: [0040](architectural-decision-records/0040-the-calendar-carries-workouts-to-the-watch.md) |
-| `TZ` | `UTC` | | `schedule.today_in` | Which day "today" is for the calendar. The cluster sets `America/Los_Angeles` |
+| `TZ` | `UTC` | | `schedule.today_in`, `cli.trainer_plan` | Which day "today" is for the calendar, and when Trainer's week turns over. The cluster sets `America/Los_Angeles` |
 | `CRON_SECRET` | | `poll` only | `poll.main` | hevy2garmin's cron secret, sent as a bearer to its webhook route |
 | `POLL_SECONDS` | `60` | | `poll.main` | How often `poll` reads Hevy's workout events |
 | `RUN_CRONJOB` | | | `poll.main` | A CronJob in the poller's namespace to run whenever a workout is saved. Unset, `poll` starts nothing. Record: [0041](architectural-decision-records/0041-run-the-mirror-after-each-save.md) |

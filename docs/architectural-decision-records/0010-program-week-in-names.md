@@ -1,6 +1,6 @@
 # 0010. Routine names carry the program week, counted from the program's start date
 
-- Status: Accepted
+- Status: Superseded by [0042](0042-trainer-prescriptions-by-the-apps-rules.md)
 - Date: 2026-11-05 (git: the merge of #6)
 - Decider: TJ ("Maybe this means we drop cycle and just do Upper - W8 instead")
 - Issues and PRs: #6, #14

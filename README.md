@@ -7,7 +7,7 @@ Hevy Trainer builds a program and shows you the next session in the app, but it 
 This job closes the gap. Every run it:
 
 1. Reads the Trainer program from Hevy's private API (the endpoint the app itself uses, catalogued in [hevy-mcp-unofficial](https://github.com/LovelessCodes/hevy-mcp-unofficial)).
-2. Writes one Hevy routine per program template into a folder called `Hevy Trainer`, through the public API, named for the program week: `Upper W8` is the eighth week since the program started, which is what the app's cycle and week multiply out to. The name on the watch is the quickest way to see a run didn't land. Sets, rep ranges, warm-ups and rest times come from Trainer; working weights come from your last logged session of each exercise.
+2. Writes one Hevy routine per program template into a folder called `Hevy Trainer`, through the public API, named for Trainer's cycle and week the way the app shows them: `Upper C2 W2` is cycle 2, week 2. The name on the watch is the quickest way to see a run didn't land. Sets, rep ranges, warm-ups and rest times come from Trainer, and so do the weights: Hevy's servers don't hand out what Trainer prescribes, the app works it out on the phone, so this follows the app's own rules on your logged sessions to get the same numbers.
 3. Tells your hevy2garmin dashboard to push the routines that changed to Garmin.
 4. Puts Trainer's next workout on today's date in the Garmin calendar and takes everything else it scheduled off, so there's one planned workout at a time. That's how it gets to the watch: Garmin keeps calendar workouts in step with the watch, so when hevy2garmin rebuilds a workout after a routine changes, the watch gets the new one in place of the old. It used to send each workout with Send to Device instead, which only ever adds, and old copies piled up on the watch. That step is still there behind `SEND_TO_DEVICE`, but I run with it off.
 
@@ -40,7 +40,7 @@ Everything is environment variables.
 | `SEND_TO_DEVICE` | `1` | Send each new Garmin workout to the watch. I set `0`; it leaves old copies behind |
 | `GARMIN_DEVICE_ID` | last used | Which Garmin device to send to |
 | `SCHEDULE_NEXT` | `0` | Put the next workout on today's Garmin calendar, which is how it reaches the watch. I set `1` |
-| `TZ` | `UTC` | Which day "today" is for the calendar |
+| `TZ` | `UTC` | Which day "today" is for the calendar, and when Trainer's week turns over |
 | `CRON_SECRET` | | hevy2garmin's cron secret, for `poll` |
 | `POLL_SECONDS` | `60` | How often `poll` checks Hevy |
 | `RUN_CRONJOB` | | A CronJob for `poll` to run as soon as a workout is saved, so the next workout is on the calendar right after a session. I set `hevy-trainer-sync` |
@@ -64,5 +64,5 @@ How it all fits together, how to run it by hand, and why it works the way it doe
 ## What it does not do
 
 - Delete routines. The public API has no delete, so a template Trainer retires stays in the folder until you remove it.
-- Guess weights Trainer hasn't seen. An exercise with no logged working set gets no weight on the watch.
+- Guess weights Trainer hasn't seen. An exercise new to the program gets the last weight you logged for it anywhere, or none, until you've done it once.
 - Follow mid-session changes. The watch has whatever the last run wrote; swap an exercise in the app during a workout and hevy2garmin's merge fixes Garmin Connect afterwards, as before.

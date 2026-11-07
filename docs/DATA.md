@@ -15,7 +15,7 @@ What each source can and cannot tell this tool, and every quirk found so far. Ea
 What each provider says about how it may be called, read on 2026-11-05.
 
 - **Hevy public API:** no published rate limit. The docs ask that a job updating hourly or daily not send its requests exactly at xx:00 but at a random minute instead, and warn the API may change or be abandoned. The CronJob runs at minute 7. The poller reads the events once a minute, which that request, about hourly and daily jobs, doesn't speak to. Hevy Pro only.
-- **Hevy private API:** undocumented, so no published terms or limits. Used for two calls a run, as the web app makes them, plus the two preferences endpoints while #12 is open.
+- **Hevy private API:** undocumented, so no published terms or limits. Used for five calls a run: the refresh, the program, both preferences and the user's workouts, the last three as the app makes them for Trainer (record 0042).
 - **Garmin Connect:** undocumented, with no published terms for this API. Called only after a routine changed.
 - **hevy2garmin:** TJ's own deployment. Its webhook route throttles past `WEBHOOK_MAX_INFLIGHT` (see below).
 
@@ -26,11 +26,23 @@ What each provider says about how it may be called, read on 2026-11-05.
 - **What it has** (2026-11-04): `id`, `created_at`, `current_week`, `next_workout_index`, `program_variety`, `exercises_rotated_at`, `edits`, and `templates[]`. Each template has a `key` such as `upper_2x_a` and `exercises[]` with `index`, `exercise_template_id` (the public API's template id), `set_count`, `warmup_set_count`, `rep_range {start, end}` and `rest_seconds`.
 - **What it lacks**: weights, and any display title. The title comes from the key: the words before the frequency token (`upper_2x_a` is "Upper").
 - **The whole reply** (2026-11-06, logged by `get_program`): `program` and `status`, nothing else. No next workout and no weights anywhere, though the request asks for `client_next_workout_updated_at`. The program also has `schema_version`, `level`, `goal`, `equipments`, `weekly_frequency`, `updated_at`, `workout_duration_minutes`, `rest_timer_length`, `cardio_preference`, `split_type` and `deloads_enabled`; each exercise also has `id` and `kind`; each template has `name` and `edits`.
-- **`current_week` is not the app's week** (2026-11-04, again 2026-11-06): it read 5 while the app showed "Cycle 2 (6-Week Program)", week 2/6. Calendar weeks since `created_at` gave 8, which is neither, so the names' `W8` matches nothing the app shows. Record: [0010](architectural-decision-records/0010-program-week-in-names.md). Issue #14.
+- **`current_week` is not the app's week** (2026-11-04, again 2026-11-06): it read 5 while the app showed "Cycle 2 (6-Week Program)", week 2/6. Calendar weeks since `created_at` gave 8, which the app shows as cycle 2, week 2. Records: [0010](architectural-decision-records/0010-program-week-in-names.md), [0042](architectural-decision-records/0042-trainer-prescriptions-by-the-apps-rules.md). Issue #14.
 - **The app's week and prescribed weights are worked out on the phone** (2026-11-06, read from the Android app 3.2.5). The v3 reply has neither, and hevy.com's Trainer page has no code for either. #12.
   - **Week.** Calendar weeks since the program's `created_at`, each starting on the user's first weekday at local midnight, plus one. Cycle is `floor((week - 1) / n) + 1` and week of cycle is `(week - 1) % n + 1`, where `n` is 6, or 7 with `deloads_enabled`. Week 8 shows as "Cycle 2", week 2/6.
   - **Weight.** From the last time the exercise was logged, its normal sets only: the base is their lowest weight. Fewer sets than the target: no change. Every set at or above the top of the rep range: base times 1.05. Every set below the bottom: base times 0.95. Otherwise no change. A deload week takes 60%. The rep range itself can move up or down a fixed ladder (4-6, 6-8, 8-12, 12-15, 15-20, 20-25, 25-30), which is the green "Reps" arrow in the app, so the program's `rep_range` is only the starting range.
   - **Rounding** goes to a weight the user has: the dumbbells, bars and plates kept in Trainer's preferences, or a machine's increment (up for an increase, down for a decrease, nearest otherwise).
+  - **Dumbbells round as a pair.** The app doubles each available dumbbell before rounding, so the logged weight of a dumbbell exercise counts both. TJ logs dumbbell RDLs at 130 lb with a 100 lb heaviest dumbbell.
+  - **History.** The previous log is the newest workout from the same Trainer template (`trainer_workout_template_id`) holding the exercise, outside deload weeks. Only exercises of type `weight_reps` or `bodyweight_reps` on a dumbbell, barbell or machine get a weight; `reps_only` ones move their rep range; anything else gets nothing. Types and equipment come from the library the app ships, 451 exercises in 3.2.5 (`library.py`).
+  - **New exercises.** With no previous log the app guesses from the best one-rep max of the last 3 or 12 months. This tool doesn't, and keeps the last logged weight.
+
+## Trainer's and the user's preferences (private)
+
+- **`GET /hevy_trainer/user_preferences`** (2026-11-06): `excludedExercisesIds`, `availableWeights` and `availableEquipment` (the same lists: `platesKg`, `platesLbs`, `barsKg`, `barsLbs`, `dumbbellsKg`, `dumbbellsLbs`), `injuries` and `updated_at`. TJ's `dumbbellsLbs` runs 5 to 100 lb, out of order.
+- **`GET /v2/user_preferences`** (2026-11-06): `username`, `weight_unit`, `first_weekday` and display settings.
+
+## The user's workouts (private)
+
+- **`GET /user_workouts_paged?username=&limit=&offset=`** answers `{workouts: [...]}`, newest first (2026-11-06, from the app's code; the first run after #58 confirms it live). Each workout carries `trainer_workout_template_id` and `start_time` in Unix seconds, and each set an `indicator` (`normal`, `warmup` and so on), `reps` and `weight_kg`. The public API's workouts say neither which Trainer template they came from nor much else the app's rules read.
 - **`exercises_rotated_at`** read Thursday 29 Oct, so rotations do not fall on week boundaries.
 
 ## Hevy session (private)
