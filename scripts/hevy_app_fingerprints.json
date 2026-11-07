@@ -1,0 +1,23 @@
+{
+  "app_version": "3.2.5",
+  "modules": {
+    "roundToTwoDecimal": "f5d4c03650321af2dd480108f83295160d7b0db98682590a72ffd1cef129976d",
+    "startOfWeek": "8bbf5cf46ccb9a6726529bceb51724d02d82fcd4b499668ba1c990e0dc2b8846",
+    "weight": "e6594c226673d5e6c83b31dc5df87498705e7787128113b1ad40affdcbd2c433",
+    "exactLbsToKg": "eeee0fc87ce8d132aa16586c80d968a8353d9c90d843eb83f398893bdefcc8cf",
+    "loadableWeights,fewestPlatesForEachLoad,roundToThreeDecimals": "1c366e4b83fb3cf4740c605016002385cf76f6b847cc1ecd04f1acc52f3b5a4b",
+    "startOfWeek#2": "570139427f53f550ea671183735adc16ea9b589cf30e6276c226baa29208528e",
+    "getWeeksInCycle,getCycleNumber,getWeekOfCycle,isDeloadWeek": "8a7883d07a5173b41401265de047e2dc2c3da73158145831c3ea62420bc80fa5",
+    "adjustWeightForEquipment,adjustForMachine,adjustForDumbbell,adjustForBarbell,pickWeight,pickWeightInDirection": "28a14eb50986b64cdc7ff9b2d451310835a2d9f063375541e2c2181143758bf6",
+    "loadableBarbellWeights,realBarsOrStandardBar": "bdcb34aaa336b60a4fd6170afaade8f02e53ecb323338122e0a0dd8439d57c8d",
+    "getWeightSuggestionEquipment": "345c79e569691d730d42f886ba8e01b3e36615be08dd7ce1880c38f6e6cdb6ee",
+    "normalizeWarmupSetCount": "5456bfe093837962ad1ab65a6782fddec2c9bb5ac317d67764d9bc49e7d8ae97",
+    "calculateTrainerWeightSuggestion,decideWeightSuggestion,calculateTrainerRepsSuggestion,decideWeightProgression,lightenForDeload": "218a37bf7f6d039c853021def3e2a98acb15007417a562b45c506e0e733af466",
+    "evaluateLastPerformance,computeWeightProgression": "3155a82c4f50128978c9b29433cf511a4e13eea0fd9bdba806a0d733ed0c69e2",
+    "didNotMeetSetCountTarget,allSetsAtTopOfRange,allSetsBelowBottomOfRange": "d3ea39c8a3bfa96f9018805ff98d11c3654c7e6c68fd228acbfab453a7eff416",
+    "nextRepRangeUp,nextRepRangeDown,deriveRepsProgression,computeRepsProgression": "c8783da2dd131eb28e9a6f31a44701b723882dd61e15e62fd6a352176f8158e7",
+    "toWarmupWeightsSuggestion,calculateWarmupWeights": "5e4d3bb9151727ac7b42c04520355c1d800d27c49a00bfb95e0bd90bba7066d6",
+    "getTrainerExerciseProgression,getTrainerWeightProgression,getTrainerRepsProgression,toExerciseLog,extractExerciseLogs,getWeightSuggestionContext,isSupportedWeightExerciseType,isSupportedEquipmentCategory,buildSetContext,extractPreviousExerciseLog": "8e0f3cc3f6aaca93e0e97fa905c74b610dd78e70a014c89cb699851e88fa2322",
+    "calendarWeekOf": "aa3a4bcb3f9cdde0c8f1e101790f26d41c4b968f40b4572a7273ce8bc0f10c20"
+  }
+}

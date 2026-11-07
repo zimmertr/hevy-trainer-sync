@@ -15,6 +15,7 @@ How a change travels from a pull request to the CronJob in the cluster.
 | Argo CD application `hevy2garmin` (namespace `argo-system`) | Applies Kubernetes-Manifests main to the cluster |
 | Dependabot | Weekly version PRs for pip and the base image, daily ones for Actions, plus security updates. Patch and minor updates merge themselves |
 | GitHub code scanning | CodeQL on every PR and push, and the weekly Trivy scan of the released image, in the Security tab |
+| APKPure, through EFF's apkeep | The latest Hevy Android app, for the weekly Hevy App Check. Read only, never run |
 
 ## Conventions
 
@@ -89,6 +90,12 @@ Every Monday Dependabot checks `requirements.in` and `requirements-dev.in`, reco
 
 On 2026-11-05, before releases, the path from merge to a merged Kubernetes-Manifests PR took about three minutes.
 
+## The weekly Hevy app check
+
+`hevy-app.yml` runs every Monday at 15:41 UTC, and by hand from the Actions tab. It downloads the latest Hevy Android app from APKPure with apkeep, decompiles it with the pinned `hermes-dec` (`scripts/requirements-hevy-app.txt`), and runs `scripts/hevy_app.py check`. That compares fingerprints of the app functions `trainer_rules.py` follows, and the app's exercise library, with `scripts/hevy_app_fingerprints.json` and `library.py`.
+
+A change opens one P1 issue, "Hevy's app changed something hevy-trainer-sync follows", naming what moved. Any other failure fails the run, and GitHub emails. To clear an issue, read the named functions against `trainer_rules.py` and fix what differs. Then run `python scripts/hevy_app.py update APP.xapk` in Docker and commit the new fingerprints and library in the same PR. A new `hermes-dec` changes every fingerprint, so a bump of it needs an `update` too. Record: [0042](architectural-decision-records/0042-trainer-prescriptions-by-the-apps-rules.md).
+
 ## The release scan
 
 A fixable Critical or High in the pushed image fails **Scan Pushed Image**. Production stays on the previous release and no GitHub release is made, but the image and the git tag stay published. The job's summary has the table. The fix is the next release: usually a rebuild is enough, because the Dockerfile runs `apt-get upgrade` after `APP_COMMIT`, which every commit changes, so merge any PR (a `chore:` will do) once Debian or PyPI has the fix. Record: [0034](architectural-decision-records/0034-upgrade-after-a-per-build-argument.md). A Python package with a fix needs its pin moved in `requirements.in`, then `make lock`.
@@ -109,5 +116,5 @@ Use "Re-run failed jobs" on the run's page, never "Re-run all jobs": once the im
 |---|---|---|
 | `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` | This repo's Actions secrets | Build & Push |
 | `GH_PAT` | This repo's Actions secrets | Deploy Bump, as the module's `deploy-token`. Needs contents and pull-requests write on Kubernetes-Manifests |
-| `GITHUB_TOKEN` | Given to each run | Tag and Release, the weekly scan (SARIF upload), the auto-merge comment |
+| `GITHUB_TOKEN` | Given to each run | Tag and Release, the weekly scan (SARIF upload), the auto-merge comment, the Hevy app check's issue |
 | `AUTO_MERGE_PAT` | This repo's **Dependabot** secrets | `dependabot-auto-merge.yml`. TJ's personal PAT. A merge made with `GITHUB_TOKEN` would not start `release.yml` |

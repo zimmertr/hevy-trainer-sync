@@ -29,7 +29,7 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0007](0007-hourly-cronjob.md) | The mirror runs hourly as a Kubernetes CronJob | 2026-11-04 | Accepted |
 | [0008](0008-no-calendar-scheduling.md) | Workouts are not scheduled on the Garmin calendar | 2026-11-04 | Superseded by 0040 |
 | [0009](0009-send-to-device-from-here.md) | This job sends each new Garmin workout to the watch, using hevy2garmin's Garmin session | 2026-11-04 | Accepted. Send to Device turned off by 0040 |
-| [0010](0010-program-week-in-names.md) | Routine names carry the program week, counted from the program's start date | 2026-11-05 | Accepted |
+| [0010](0010-program-week-in-names.md) | Routine names carry the program week, counted from the program's start date | 2026-11-05 | Superseded by 0042 |
 | [0011](0011-ci-bumps-manifests.md) | CI bumps the image tag in Kubernetes-Manifests with one self-merging PR | 2026-11-05 | Accepted |
 | [0012](0012-tag-edited-in-place.md) | CI edits the newTag line in place instead of running kustomize edit | 2026-11-05 | Accepted |
 | [0013](0013-bluebird-issue-flow.md) | Issues follow Bluebird's create-issue flow and labels | 2026-11-05 | Accepted. Skill location superseded by 0027 |
@@ -61,3 +61,4 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0039](0039-merge-only-after-the-watch-activity.md) | The poller asks hevy2garmin to merge only once the watch's activity is on Garmin, and nothing is ever uploaded | 2026-11-06 | Accepted. Supersedes 0019 |
 | [0040](0040-the-calendar-carries-workouts-to-the-watch.md) | Workouts reach the watch through the Garmin calendar, one planned entry at a time, and Send to Device is off | 2026-11-06 | Accepted. Supersedes 0008 |
 | [0041](0041-run-the-mirror-after-each-save.md) | The poller runs the mirror as soon as a workout is saved, and runs take a lock on the session | 2026-11-06 | Accepted. Amends 0007 |
+| [0042](0042-trainer-prescriptions-by-the-apps-rules.md) | The watch gets Trainer's own prescriptions and cycle week, worked out by the app's rules | 2026-11-06 | Accepted. Supersedes 0010 |
