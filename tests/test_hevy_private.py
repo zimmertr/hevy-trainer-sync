@@ -114,6 +114,14 @@ class GetProgramTest(unittest.TestCase):
         request.assert_called_once()
         self.assertEqual(persisted, [])
 
+    def test_the_reply_is_logged_without_its_strings(self, request):
+        request.return_value = ({"program": {"id": "p"}, "next_workout": {"weight_kg": 22.68, "title": "Fly"}}, {})
+        s, _ = session(access_token="A", refresh_token="R", expires_at=FUTURE)
+        with self.assertLogs("hevy-trainer-sync.trainer") as logs:
+            s.get_program()
+        self.assertIn('"next_workout":{"weight_kg":22.68,"title":"str"}', logs.output[0])
+        self.assertNotIn("Fly", logs.output[0])
+
     def test_unexpected_shape_is_an_error(self, request):
         for answer in (None, {"program": None}, {"program": []}):
             request.side_effect = None
@@ -121,6 +129,19 @@ class GetProgramTest(unittest.TestCase):
             s, _ = session(access_token="A", refresh_token="R", expires_at=FUTURE)
             with self.assertRaisesRegex(RuntimeError, "unexpected program response"):
                 s.get_program()
+
+
+class ShapeTest(unittest.TestCase):
+    def test_strings_are_hidden_and_numbers_kept(self):
+        self.assertEqual(
+            hevy_private.shape({"id": "abc", "sets": [{"reps": 12, "kg": 22.5, "warmup": False, "rpe": None}]}),
+            {"id": "str", "sets": [{"reps": 12, "kg": 22.5, "warmup": False, "rpe": None}]},
+        )
+
+    def test_long_lists_are_cut_short(self):
+        out = hevy_private.shape(list(range(hevy_private.SHAPE_ITEMS + 5)))
+        self.assertEqual(len(out), hevy_private.SHAPE_ITEMS + 1)
+        self.assertEqual(out[-1], "5 more")
 
 
 if __name__ == "__main__":
