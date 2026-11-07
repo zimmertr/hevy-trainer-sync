@@ -1,6 +1,7 @@
 """Hevy's private API: the one the app uses, not the documented v1 API.
 
-Only two calls are made. The endpoints and headers come from the inventory in
+Only two calls are made, plus two that are logged and never used
+(`log_preferences`). The endpoints and headers come from the inventory in
 github.com/LovelessCodes/hevy-mcp-unofficial and were checked live on 4 Nov 2026.
 Hevy can change or close them without notice.
 """
@@ -90,4 +91,21 @@ class Session:
         if not isinstance(body, dict) or not isinstance(body.get("program"), dict):
             raise RuntimeError(f"unexpected program response: {str(body)[:200]}")
         log.info("trainer reply, strings hidden: %s", json.dumps(shape(body), separators=(",", ":")))
+        self.log_preferences()
         return body["program"]
+
+    def log_preferences(self) -> None:
+        """Log the shape of Trainer's preferences and the user's, the inputs the app's weight and week rules read.
+
+        The app works out prescribed weights and the cycle week on the phone
+        (#12). It reads the available dumbbells, bars and plates from Trainer's
+        preferences and the first day of the week from the user's. This shows
+        what each holds. It never fails a run, and goes once #12 is built.
+        """
+        for path in ("hevy_trainer/user_preferences", "v2/user_preferences"):
+            try:
+                body, _ = request("GET", f"{BASE}/{path}", headers=self._headers())
+            except (HttpError, OSError) as e:
+                log.warning("%s unavailable: %s", path, e)
+                continue
+            log.info("%s, strings hidden: %s", path, json.dumps(shape(body), separators=(",", ":")))
