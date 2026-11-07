@@ -11,4 +11,4 @@ If you send a change:
 - The repo is public. No tokens, ids or personal data in code, fixtures or logs.
 - Never run the tool against a real Hevy session you care about: every run rotates its refresh token ([docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#running-the-tool)).
 
-Security problems go through private reporting, not issues ([SECURITY.md](SECURITY.md)).
+Security problems go through private reporting, not issues ([the security policy](https://github.com/zimmertr/hevy-trainer-sync/security/policy)).

@@ -32,7 +32,7 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0010](0010-program-week-in-names.md) | Routine names carry the program week, counted from the program's start date | 2026-11-05 | Superseded by 0042 |
 | [0011](0011-ci-bumps-manifests.md) | CI bumps the image tag in Kubernetes-Manifests with one self-merging PR | 2026-11-05 | Accepted |
 | [0012](0012-tag-edited-in-place.md) | CI edits the newTag line in place instead of running kustomize edit | 2026-11-05 | Accepted |
-| [0013](0013-bluebird-issue-flow.md) | Issues follow Bluebird's create-issue flow and labels | 2026-11-05 | Accepted. Skill location superseded by 0027 |
+| [0013](0013-bluebird-issue-flow.md) | Issues follow Bluebird's create-issue flow and labels | 2026-11-05 | Accepted. Skill location superseded by 0027, template location by 0044 |
 | [0014](0014-routines-stay-in-hevy.md) | The mirrored routines stay in Hevy after they reach Garmin | 2026-11-05 | Accepted |
 | [0015](0015-nothing-upstream-yet.md) | Nothing goes upstream to hevy2garmin until this tool has been polished and tested | 2026-11-05 | Accepted |
 | [0016](0016-garmin-keeps-posting-to-strava.md) | Garmin's own Strava connection stays on | 2026-11-05 | Superseded by 0020 |
@@ -63,3 +63,4 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0041](0041-run-the-mirror-after-each-save.md) | The poller runs the mirror as soon as a workout is saved, and runs take a lock on the session | 2026-11-06 | Accepted. Amends 0007 |
 | [0042](0042-trainer-prescriptions-by-the-apps-rules.md) | The watch gets Trainer's own prescriptions and cycle week, worked out by the app's rules | 2026-11-06 | Accepted. Supersedes 0010. Amended by 0043 |
 | [0043](0043-no-check-for-app-updates.md) | Nothing checks for Hevy app updates; a mismatch in the app is how one shows | 2026-11-07 | Accepted. Amends 0042 |
+| [0044](0044-shared-issue-templates-and-security-policy.md) | The issue templates and security policy come from `zimmertr/.github` | 2026-11-07 | Accepted. Supersedes 0013 in part |

@@ -1,6 +1,6 @@
 # 0013. Issues follow Bluebird's create-issue flow and labels
 
-- Status: Accepted. Where the skill lives is superseded by 0027
+- Status: Accepted. Where the skill lives is superseded by 0027, where the templates live by 0044
 - Date: 2026-11-05 (git: the merge of #15)
 - Decider: TJ ("Look at how Bluebird creates labels. Reproduce that here")
 - Issues and PRs: #7 to #14, #15
