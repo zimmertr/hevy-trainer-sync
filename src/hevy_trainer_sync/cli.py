@@ -90,10 +90,19 @@ def trainer_plan(session: Session, program: dict, templates: list[dict], now: da
     cycle, week_in_cycle = trainer_rules.cycle_number(week, deloads), trainer_rules.week_of_cycle(week, deloads)
     log.info("program week %d (started %s, weeks from %s): cycle %d, week %d of %d", week,
              program.get("created_at"), first, cycle, week_in_cycle, trainer_rules.weeks_in_cycle(deloads))
+    # Without the history there are no prescriptions, but the names, the
+    # routines and the calendar still have to move on, so these warn and fall
+    # back to the last logged weights instead of failing the run.
     username = user.get("username")
     if not username:
-        raise RuntimeError("the user's preferences carry no username; cannot read their workouts")
-    workouts = session.workouts_since(username, created)
+        log.warning("the user's preferences carry no username; every exercise keeps its last logged weight")
+        return cycle, week_in_cycle, {}
+    try:
+        workouts = session.workouts_since(username, created)
+    except (HttpError, OSError) as e:
+        why = f"HTTP {e.status}" if isinstance(e, HttpError) else type(e).__name__
+        log.warning("could not read the workout history (%s); every exercise keeps its last logged weight", why)
+        return cycle, week_in_cycle, {}
     log.info("%d workouts since the program started", len(workouts))
     planned = build.plan(templates, workouts, available, unit, trainer_rules.is_deload_week(week, deloads),
                          lambda dt: trainer_rules.is_deload_week(week_of(dt), deloads))

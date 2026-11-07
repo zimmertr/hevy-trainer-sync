@@ -17,9 +17,10 @@ BASE = "https://api.hevyapp.com"
 # A fixed key the hevy.com web client sends; it identifies the client, not the user.
 WEB_API_KEY = "shelobs_hevy_web"
 EPOCH = "1970-01-01T00:00:00.000Z"
-WORKOUT_PAGE = 10
+# The app asks for 1 or 3 workouts a page; on 7 Nov 2026 Hevy answered 10 with a 400.
+WORKOUT_PAGE = 3
 # A ceiling on paging, far past any program's length at a few workouts a week.
-MAX_WORKOUT_PAGES = 50
+MAX_WORKOUT_PAGES = 150
 
 
 def parse_time(raw) -> datetime | None:

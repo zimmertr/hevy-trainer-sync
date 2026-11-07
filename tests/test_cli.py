@@ -245,10 +245,24 @@ class MainTest(unittest.TestCase):
         self.assertIn("WARNING:hevy-trainer-sync:the program has no start date", logs)
         self.Session.return_value.workouts_since.assert_not_called()
 
-    def test_no_username_stops_the_run(self):
+    def test_no_username_falls_back_to_last_weights(self):
         self.Session.return_value.user_preferences.return_value = {"weight_unit": "kg"}
-        with self.assertRaisesRegex(RuntimeError, "no username"):
-            self.run_on("--dry-run")
+        rc, logs = self.run_on("--dry-run")
+        self.assertEqual(rc, 0)
+        self.assertIn("WARNING:hevy-trainer-sync:the user's preferences carry no username", logs)
+        self.Session.return_value.workouts_since.assert_not_called()
+
+    def test_no_workout_history_still_names_and_writes_the_routines(self):
+        for error, why in ((HttpError(400, "", "u"), "HTTP 400"), (TimeoutError(), "TimeoutError")):
+            with self.subTest(why=why):
+                self.hevy.create_routine.reset_mock()
+                self.Session.return_value.workouts_since.side_effect = error
+                rc, logs = self.run_on()
+                self.assertEqual(rc, 0)
+                self.assertIn(f"WARNING:hevy-trainer-sync:could not read the workout history ({why}); "
+                              "every exercise keeps its last logged weight", logs)
+                self.assertEqual([c.args[0]["title"] for c in self.hevy.create_routine.call_args_list],
+                                 ["Upper C2 W2", "Lower C2 W2"])
 
     def test_prescriptions_reach_the_routine_and_the_log(self):
         side_bend = {"exercise_template_id": "026FD047", "index": 0, "kind": "resistance", "set_count": 3,
