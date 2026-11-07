@@ -42,7 +42,7 @@ What each provider says about how it may be called, read on 2026-11-05.
 
 ## The user's workouts (private)
 
-- **`GET /user_workouts_paged?username=&limit=&offset=`** answers `{workouts: [...]}`, newest first (2026-11-06, from the app's code; the first run after #58 confirms it live). Each workout carries `trainer_workout_template_id` and `start_time` in Unix seconds, and each set an `indicator` (`normal`, `warmup` and so on), `reps` and `weight_kg`. The public API's workouts say neither which Trainer template they came from nor much else the app's rules read.
+- **`GET /user_workouts_paged?username=&limit=&offset=`** answers `{workouts: [...]}`, newest first (2026-11-06, from the app's code). On 2026-11-07 a `limit` of 10 got a 400 with an empty body; the app only asks for 1 or 3, so the run asks for 3. The reply's shape is still unconfirmed live. Each workout carries `trainer_workout_template_id` and `start_time` in Unix seconds, and each set an `indicator` (`normal`, `warmup` and so on), `reps` and `weight_kg`. The public API's workouts say neither which Trainer template they came from nor much else the app's rules read.
 - **`exercises_rotated_at`** read Thursday 29 Oct, so rotations do not fall on week boundaries.
 
 ## Hevy session (private)

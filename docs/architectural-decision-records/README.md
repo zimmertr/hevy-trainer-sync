@@ -61,4 +61,5 @@ A new record that reverses an old one says `Supersedes 00NN` in its status line.
 | [0039](0039-merge-only-after-the-watch-activity.md) | The poller asks hevy2garmin to merge only once the watch's activity is on Garmin, and nothing is ever uploaded | 2026-11-06 | Accepted. Supersedes 0019 |
 | [0040](0040-the-calendar-carries-workouts-to-the-watch.md) | Workouts reach the watch through the Garmin calendar, one planned entry at a time, and Send to Device is off | 2026-11-06 | Accepted. Supersedes 0008 |
 | [0041](0041-run-the-mirror-after-each-save.md) | The poller runs the mirror as soon as a workout is saved, and runs take a lock on the session | 2026-11-06 | Accepted. Amends 0007 |
-| [0042](0042-trainer-prescriptions-by-the-apps-rules.md) | The watch gets Trainer's own prescriptions and cycle week, worked out by the app's rules | 2026-11-06 | Accepted. Supersedes 0010 |
+| [0042](0042-trainer-prescriptions-by-the-apps-rules.md) | The watch gets Trainer's own prescriptions and cycle week, worked out by the app's rules | 2026-11-06 | Accepted. Supersedes 0010. Amended by 0043 |
+| [0043](0043-no-check-for-app-updates.md) | Nothing checks for Hevy app updates; a mismatch in the app is how one shows | 2026-11-07 | Accepted. Amends 0042 |

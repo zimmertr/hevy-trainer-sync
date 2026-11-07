@@ -4,9 +4,9 @@ Hevy's servers send none of these: the app works them out on the phone, from
 the program, the user's Trainer workouts and two sets of preferences. These
 functions follow the Android app's, read from version 3.2.5 on 2026-11-06, and
 each docstring names the app function it follows. They are written from the
-rules, not copied. The weekly check in .github/workflows/hevy-app.yml
-fingerprints those app functions and opens an issue when an update changes
-one. Decision record 0042, docs/DATA.md.
+rules, not copied. Nothing watches for an app update that changes them: the
+app shows its own weight beside the watch's every session, so a mismatch is
+how it shows. Decision records 0042 and 0043, docs/DATA.md.
 
 Weights inside these functions are in the exercise's unit (lbs or kg) except
 where a name ends in _kg, as in the app.
