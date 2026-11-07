@@ -2,6 +2,7 @@ import contextlib
 import os
 import runpy
 import unittest
+from datetime import UTC, datetime
 from unittest import mock
 
 from hevy_trainer_sync import build, cli
@@ -11,6 +12,11 @@ TOKENS = {"access_token": "A", "refresh_token": "R", "expires_at": None}
 TODAY = "2026-11-05"
 DB = "postgresql://ro@db/hevy2garmin"
 BASE_ENV = {"HEVY_STATE_FILE": "/state/s.json", "HEVY_API_KEY": "key", "H2G_PASSWORD": "pw"}
+USER = {"username": "tj", "weight_unit": "lbs", "first_weekday": "monday"}
+DUMBBELLS = {"dumbbellsLbs": [5, 10, 15, 17.5, 20, 22.5, 25, 30]}
+CREATED = "2026-09-14T20:26:40.922Z"
+# Friday 6 Nov 2026, noon in Los Angeles: program week 8, which the app shows as cycle 2, week 2.
+NOW = datetime(2026, 11, 6, 20, 0, tzinfo=UTC)
 
 
 def template(key, index, tid):
@@ -58,6 +64,9 @@ class MainTest(unittest.TestCase):
         self.save = self._patch(cli.state, "save")
         self.Session = self._patch(cli, "Session")
         self.Session.return_value.get_program.return_value = program()
+        self.Session.return_value.user_preferences.return_value = USER
+        self.Session.return_value.trainer_preferences.return_value = {"availableWeights": DUMBBELLS}
+        self.Session.return_value.workouts_since.return_value = []
         self.Client = self._patch(cli, "Client")
         self.hevy = self.Client.return_value
         self.hevy.recent_workouts.return_value = []
@@ -213,15 +222,57 @@ class MainTest(unittest.TestCase):
         self.assertIn("hevy2garmin: synced=2 skipped=0 failed=0", logs)
         self.send.assert_not_called()
 
-    def test_week_goes_in_the_title(self):
-        with mock.patch.object(cli.build, "program_week", return_value=8) as week:
-            self.Session.return_value.get_program.return_value = program(created_at="2026-09-14T20:26:40Z")
-            _, logs = self.run_main()
-        week.assert_called_once_with("2026-09-14T20:26:40Z")
-        self.assertIn("program week 8 (started 2026-09-14T20:26:40Z)", logs)
+    def run_on(self, *argv, **env):
+        """run_main at NOW, with the program's start date set."""
+        self.Session.return_value.get_program.return_value = program(created_at=CREATED)
+        with mock.patch.object(cli, "datetime") as dt:
+            dt.now.return_value = NOW
+            return self.run_main(*argv, TZ="America/Los_Angeles", **env)
+
+    def test_cycle_and_week_go_in_the_title(self):
+        _, logs = self.run_on()
+        self.assertIn("program week 8 (started 2026-09-14T20:26:40.922Z, weeks from monday): cycle 2, week 2 of 6",
+                      logs)
+        self.assertIn("0 workouts since the program started", logs)
+        self.Session.return_value.workouts_since.assert_called_once_with(
+            "tj", datetime(2026, 9, 14, 20, 26, 40, 922000, tzinfo=UTC))
         self.assertEqual(
-            [c.args[0]["title"] for c in self.hevy.create_routine.call_args_list], ["Upper W8", "Lower W8"]
+            [c.args[0]["title"] for c in self.hevy.create_routine.call_args_list], ["Upper C2 W2", "Lower C2 W2"]
         )
+
+    def test_no_start_date_means_no_week_and_no_prescriptions(self):
+        _, logs = self.run_main("--dry-run")
+        self.assertIn("WARNING:hevy-trainer-sync:the program has no start date", logs)
+        self.Session.return_value.workouts_since.assert_not_called()
+
+    def test_no_username_stops_the_run(self):
+        self.Session.return_value.user_preferences.return_value = {"weight_unit": "kg"}
+        with self.assertRaisesRegex(RuntimeError, "no username"):
+            self.run_on("--dry-run")
+
+    def test_prescriptions_reach_the_routine_and_the_log(self):
+        side_bend = {"exercise_template_id": "026FD047", "index": 0, "kind": "resistance", "set_count": 3,
+                     "warmup_set_count": 1, "rep_range": {"start": 10, "end": 12}, "rest_seconds": 90}
+        other = {**side_bend, "exercise_template_id": "U1", "index": 1}
+        upper = {"id": "T-U", "key": "upper_2x_a", "index": 0, "exercises": [side_bend, other]}
+        sets = [{"indicator": "normal", "reps": 12, "weight_kg": 35 / 2.20462}] * 3
+        self.Session.return_value.workouts_since.return_value = [
+            {"trainer_workout_template_id": "T-U", "start_time": 1762211594,
+             "exercises": [{"exercise_template_id": "026FD047", "sets": sets}]}]
+        self.Session.return_value.get_program.return_value = program(created_at=CREATED, templates=[upper])
+        with mock.patch.object(cli, "datetime") as dt:
+            dt.now.return_value = NOW
+            _, logs = self.run_main("--dry-run", TZ="America/Los_Angeles")
+        self.assertIn("1 workouts since the program started", logs)
+        self.assertIn("  Side Bend (Dumbbell): 40 lbs (increase), warm-ups 20", logs)
+        self.assertIn("  U1: no Trainer prescription; the last logged weight", logs)
+
+    def test_describe(self):
+        weight = build.Planned("increase", 18.14, (6.8, 11.34), None, 40, "lbs")
+        self.assertEqual(cli.describe(weight), "40 lbs (increase), warm-ups 14.99, 25")
+        self.assertEqual(cli.describe(build.Planned("none", 20, (), None, 20, "kg")), "20 kg (none)")
+        reps = build.Planned("increase", None, (), {"start": 15, "end": 20})
+        self.assertEqual(cli.describe(reps), "15-20 reps (increase)")
 
     def test_unchanged_routines_are_left_alone(self):
         self.existing_upper_and_lower()
@@ -247,13 +298,12 @@ class MainTest(unittest.TestCase):
         self.dash.sync_routines.assert_called_once_with(["u"])
 
     def test_last_weeks_routine_is_renamed_not_duplicated(self):
-        self.hevy.routines.return_value = [routine("upper_2x_a", "U1", "u", title="Upper W7"),
-                                           routine("lower_2x_a", "L1", "l")]
-        with mock.patch.object(cli.build, "program_week", return_value=8):
-            rc, logs = self.run_main()
+        self.hevy.routines.return_value = [routine("upper_2x_a", "U1", "u", title="Upper W8"),
+                                           routine("lower_2x_a", "L1", "l", title="Lower C2 W1")]
+        rc, logs = self.run_on()
         self.assertEqual(rc, 0)
-        self.assertIn("Upper W8: update (Upper W7 -> Upper W8) (1 exercises)", logs)
-        self.assertIn("Lower W8: update (Lower -> Lower W8) (1 exercises)", logs)
+        self.assertIn("Upper C2 W2: update (Upper W8 -> Upper C2 W2) (1 exercises)", logs)
+        self.assertIn("Lower C2 W2: update (Lower C2 W1 -> Lower C2 W2) (1 exercises)", logs)
         self.hevy.create_routine.assert_not_called()
         self.assertEqual([c.args[0] for c in self.hevy.update_routine.call_args_list], ["u", "l"])
 

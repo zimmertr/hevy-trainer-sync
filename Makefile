@@ -43,11 +43,13 @@ scan: build
 	  --skip-files '**/pip/_vendor/bom.cdx.json' \
 	  --ignore-unfixed --severity CRITICAL,HIGH --exit-code 1 $(IMAGE)
 
-# Not a check: rewrites the two hashed locks from requirements.in and
-# requirements-dev.in, on the image's own Python. pip-compile keeps every pin
+# Not a check: rewrites the three hashed locks (the image's, the tests' and the
+# weekly Hevy app check's decompiler), on the image's own Python. pip-compile keeps every pin
 # it already has unless asked; add --upgrade-package NAME to move one. The
 # pip-tools and pip versions are Bluebird's, the pair Dependabot also runs.
 lock:
 	$(RUN) $(PYTHON_IMAGE) sh -c "pip install -q --root-user-action=ignore 'pip<26' pip-tools==7.5.3 && \
 	  pip-compile -q --generate-hashes --allow-unsafe --strip-extras --output-file=requirements.txt requirements.in && \
-	  pip-compile -q --generate-hashes --allow-unsafe --strip-extras --output-file=requirements-dev.txt requirements-dev.in"
+	  pip-compile -q --generate-hashes --allow-unsafe --strip-extras --output-file=requirements-dev.txt requirements-dev.in && \
+	  pip-compile -q --generate-hashes --allow-unsafe --strip-extras \
+	    --output-file=scripts/requirements-hevy-app.txt scripts/requirements-hevy-app.in"

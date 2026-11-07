@@ -1,0 +1,4 @@
+# The weekly Hevy app check's decompiler (scripts/hevy_app.py), outside the
+# image and the test lock. The fingerprints depend on its output, so a new
+# version means rerunning `hevy_app.py update`. Decision record 0042.
+hermes-dec==0.1.8

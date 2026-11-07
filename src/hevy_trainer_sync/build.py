@@ -1,7 +1,10 @@
 """Pure functions: Trainer template in, routine payload out. No I/O, so this is what the tests cover."""
 
 import re
-from datetime import UTC, datetime
+from dataclasses import dataclass
+
+from . import library, trainer_rules
+from .hevy_private import start_of
 
 _FREQ = re.compile(r"^\d+x$")
 
@@ -20,56 +23,122 @@ def title_from_key(key: str) -> str:
     return " ".join(words) or key
 
 
-def program_week(created_at: str | None, now: datetime | None = None) -> int | None:
-    """Calendar weeks since the program started, 1-based: what the app's cycle and week multiply out to.
-
-    The program's own `current_week` is not this (it read 5 when the app showed
-    cycle 2, week 2 of a 6-week cycle, i.e. week 8), so it is not used.
-    """
-    if not created_at:
-        return None
-    try:
-        start = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    now = now or datetime.now(UTC)
-    days = (now - start).days
-    return days // 7 + 1 if days >= 0 else None
-
-
-def title(key: str, week: int | None) -> str:
-    """'Upper W8': the base title plus the program week, so a stale watch is obvious at a glance."""
+def title(key: str, cycle: int | None = None, week: int | None = None) -> str:
+    """'Upper C2 W2': the base title plus Trainer's cycle and week, as the app shows them."""
     base = title_from_key(key)
-    return f"{base} W{week}" if isinstance(week, int) and week >= 1 else base
+    return f"{base} C{cycle} W{week}" if cycle and week else base
 
 
 def is_titled_from(routine_title: str, key: str) -> bool:
-    """Whether an existing routine is this template's, whatever week it was named for."""
-    base = title_from_key(key)
-    return routine_title == base or routine_title.startswith(f"{base} W")
+    """Whether an existing routine is this template's, whatever week it was named for, old style or new."""
+    return re.fullmatch(rf"{re.escape(title_from_key(key))}( C\d+)?( W\d+)?", routine_title) is not None
+
+
+@dataclass(frozen=True)
+class Planned:
+    """One exercise as Trainer would prescribe it today, in kilograms for the routine."""
+    direction: str
+    weight_kg: float | None
+    warmups_kg: tuple
+    rep_range: dict | None
+    weight: float | None = None
+    unit: str = "kg"
+
+
+def to_log(sets: list[dict]) -> list[dict]:
+    """toExerciseLog: a missing rep count or weight counts as zero."""
+    return [
+        {"indicator": s.get("indicator") or s.get("type"), "reps": s.get("reps") or 0,
+         "weight_kg": s.get("weight_kg") or 0}
+        for s in sets
+    ]
+
+
+def exercise_logs(workouts: list[dict], template_id: str, exercise_id: str, deload_on) -> list[list[dict]]:
+    """extractExerciseLogs: this exercise's sets from this template's workouts, oldest first, deload weeks out."""
+    picked = []
+    for w in workouts:
+        if w.get("trainer_workout_template_id") != template_id:
+            continue
+        ex = next((e for e in w.get("exercises") or [] if e.get("exercise_template_id") == exercise_id), None)
+        start = start_of(w)
+        if ex is None or start is None or deload_on(start):
+            continue
+        picked.append((start, to_log(ex.get("sets") or [])))
+    return [log for _, log in sorted(picked, key=lambda p: p[0])]
+
+
+def _kg(weight: float, unit: str) -> float:
+    return weight if unit == "kg" else trainer_rules.lbs_to_kg(weight)
+
+
+def plan_exercise(template: dict, ex: dict, workouts: list[dict], available: dict, unit: str, deload: bool,
+                  deload_on) -> Planned | None:
+    """getTrainerExerciseProgression for one exercise: by weight, by reps, or None when Trainer suggests nothing."""
+    tid = ex["exercise_template_id"]
+    known = library.EXERCISES.get(tid)
+    if known is None or ex.get("kind") != "resistance" or not template.get("id"):
+        return None
+    _, kind, category = known
+    rep_range = ex.get("rep_range") or {}
+    if "start" not in rep_range or "end" not in rep_range:
+        return None
+    logs = exercise_logs(workouts, template["id"], tid, deload_on)
+    set_count = int(ex.get("set_count") or 0)
+    if kind == "reps_only":
+        p = trainer_rules.reps_prescription(logs, set_count, rep_range, deload)
+        return Planned(p.direction, None, (), p.rep_range)
+    eq = trainer_rules.equipment_for(category, unit, available)
+    if kind not in trainer_rules.WEIGHT_TYPES or eq is None:
+        return None
+    p = trainer_rules.weight_prescription(logs, set_count, rep_range, ex.get("warmup_set_count"), eq, deload)
+    if p is None:
+        return None
+    return Planned(p.direction, _kg(p.weight, unit), tuple(_kg(w, unit) for w in p.warmups), None, p.weight, unit)
+
+
+def plan(templates: list[dict], workouts: list[dict], available: dict, unit: str, deload: bool,
+         deload_on) -> dict[str, dict[str, Planned]]:
+    """Trainer's prescription for every exercise, by template id, then exercise template id."""
+    out: dict[str, dict[str, Planned]] = {}
+    for t in templates:
+        planned = {}
+        for ex in t.get("exercises", []):
+            p = plan_exercise(t, ex, workouts, available, unit, deload, deload_on)
+            if p is not None:
+                planned[ex["exercise_template_id"]] = p
+        out[str(t.get("id"))] = planned
+    return out
 
 
 def routine_from_template(template: dict, folder_id: int | None, weights_kg: dict[str, float], notes: str,
-                          title_override: str | None = None) -> dict:
+                          title_override: str | None = None, planned: dict[str, Planned] | None = None) -> dict:
     """A create/update payload for the public API, in Trainer's exercise order.
 
-    Warm-up sets carry no weight: Trainer decides those on the day. Working sets
-    get the rep range Trainer prescribes and the weight from the last logged
-    session, which is the best guess the public API can give.
+    Each exercise takes Trainer's prescription where there is one (`planned`):
+    the working weight, the warm-up weights and, for exercises logged by reps
+    alone, the rep range. Without one, working sets keep the last logged
+    weight and warm-ups go without.
     """
+    planned = planned or {}
     exercises = []
     for ex in sorted(template.get("exercises", []), key=lambda e: e.get("index", 0)):
         tid = ex["exercise_template_id"]
-        rr = ex.get("rep_range") or {}
+        p = planned.get(tid)
+        rr = (p.rep_range if p and p.rep_range else None) or ex.get("rep_range") or {}
         rep_range = {"start": rr["start"], "end": rr["end"]} if "start" in rr and "end" in rr else None
         # rep_range is sent only when there is one. POST /routines accepts
         # rep_range: null, but PUT /routines/{id} rejects it with "Expected
         # object, received null", which failed the first rename on 2026-11-05.
-        warmup = {"type": "warmup", "weight_kg": None, "reps": None}
-        working = {"type": "normal", "weight_kg": weights_kg.get(tid), "reps": None}
+        weight = p.weight_kg if p and p.weight_kg is not None else weights_kg.get(tid)
+        working = {"type": "normal", "weight_kg": weight, "reps": None}
         if rep_range:
             working["rep_range"] = rep_range
-        sets = [dict(warmup) for _ in range(int(ex.get("warmup_set_count") or 0))]
+        warmups = p.warmups_kg if p else ()
+        sets = [
+            {"type": "warmup", "weight_kg": warmups[i] if i < len(warmups) else None, "reps": None}
+            for i in range(int(ex.get("warmup_set_count") or 0))
+        ]
         sets += [dict(working) for _ in range(int(ex.get("set_count") or 0))]
         exercises.append({
             "exercise_template_id": tid,
@@ -107,8 +176,8 @@ def normalize(routine: dict) -> tuple:
 def last_weights(workouts, template_ids: set[str]) -> dict[str, float]:
     """The last working-set weight per exercise, scanning workouts newest first.
 
-    Hevy progresses weight only when every set hits the top of the range, so the
-    final working set of the most recent session is the number to pre-fill.
+    The fallback for an exercise Trainer has no prescription for, such as one
+    new to the program, which the app sizes from a recent one-rep max instead.
     """
     found: dict[str, float] = {}
     wanted = set(template_ids)

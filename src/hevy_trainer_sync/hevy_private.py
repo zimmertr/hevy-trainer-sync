@@ -1,13 +1,13 @@
 """Hevy's private API: the one the app uses, not the documented v1 API.
 
-Only two calls are made, plus two that are logged and never used
-(`log_preferences`). The endpoints and headers come from the inventory in
-github.com/LovelessCodes/hevy-mcp-unofficial and were checked live on 4 Nov 2026.
-Hevy can change or close them without notice.
+Five calls are made: the session refresh, the Trainer program, Trainer's
+preferences, the user's preferences and the user's workouts, the last three
+only because the app works out prescribed weights and the program week from
+them (trainer_rules.py). The endpoints and headers come from the inventory in
+github.com/LovelessCodes/hevy-mcp-unofficial and the Android app (record 0042),
+checked live on 4 and 6 Nov 2026. Hevy can change or close them without notice.
 """
 
-import json
-import logging
 import time
 from datetime import UTC, datetime
 
@@ -17,29 +17,26 @@ BASE = "https://api.hevyapp.com"
 # A fixed key the hevy.com web client sends; it identifies the client, not the user.
 WEB_API_KEY = "shelobs_hevy_web"
 EPOCH = "1970-01-01T00:00:00.000Z"
-# Enough for every template's exercises; past it a list is cut short in the log.
-SHAPE_ITEMS = 30
+WORKOUT_PAGE = 10
+# A ceiling on paging, far past any program's length at a few workouts a week.
+MAX_WORKOUT_PAGES = 50
 
-log = logging.getLogger("hevy-trainer-sync.trainer")
+
+def parse_time(raw) -> datetime | None:
+    """A Hevy time: Unix seconds, as the app keeps a workout's start, or ISO 8601."""
+    if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+        return datetime.fromtimestamp(raw, UTC)
+    if isinstance(raw, str):
+        try:
+            dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
+    return None
 
 
-def shape(value):
-    """The reply with every string hidden, so the log shows its structure and numbers but no ids, names or notes.
-
-    Trainer prescribes a weight for each session and the program alone has none
-    (#12). The same request also asks for the next workout, which this logs so
-    the weights can be found without reading the session from anywhere else.
-    """
-    if isinstance(value, dict):
-        return {k: shape(v) for k, v in value.items()}
-    if isinstance(value, list):
-        out = [shape(v) for v in value[:SHAPE_ITEMS]]
-        if len(value) > SHAPE_ITEMS:
-            out.append(f"{len(value) - SHAPE_ITEMS} more")
-        return out
-    if isinstance(value, str):
-        return "str"
-    return value
+def start_of(workout: dict) -> datetime | None:
+    return parse_time(workout.get("start_time"))
 
 
 class Session:
@@ -76,36 +73,56 @@ class Session:
         }
         self._persist(self.tokens)
 
-    def get_program(self) -> dict:
-        """The whole Trainer program: every template plus which one is next."""
+    def _get(self, path: str, query: dict | None = None):
+        """GET with the session, refreshed first when it has expired and once more on a 401."""
         if self._expired():
             self.refresh()
-        query = {"client_program_updated_at": EPOCH, "client_next_workout_updated_at": EPOCH}
         try:
-            body, _ = request("GET", f"{BASE}/hevy_trainer/v3/program", headers=self._headers(), query=query)
+            body, _ = request("GET", f"{BASE}/{path}", headers=self._headers(), query=query)
         except HttpError as e:
             if e.status != 401:
                 raise
             self.refresh()
-            body, _ = request("GET", f"{BASE}/hevy_trainer/v3/program", headers=self._headers(), query=query)
+            body, _ = request("GET", f"{BASE}/{path}", headers=self._headers(), query=query)
+        return body
+
+    def get_program(self) -> dict:
+        """The whole Trainer program: every template plus which one is next."""
+        query = {"client_program_updated_at": EPOCH, "client_next_workout_updated_at": EPOCH}
+        body = self._get("hevy_trainer/v3/program", query)
         if not isinstance(body, dict) or not isinstance(body.get("program"), dict):
             raise RuntimeError(f"unexpected program response: {str(body)[:200]}")
-        log.info("trainer reply, strings hidden: %s", json.dumps(shape(body), separators=(",", ":")))
-        self.log_preferences()
         return body["program"]
 
-    def log_preferences(self) -> None:
-        """Log the shape of Trainer's preferences and the user's, the inputs the app's weight and week rules read.
+    def _object(self, path: str) -> dict:
+        body = self._get(path)
+        if not isinstance(body, dict):
+            raise RuntimeError(f"unexpected {path} response: {str(body)[:200]}")
+        return body
 
-        The app works out prescribed weights and the cycle week on the phone
-        (#12). It reads the available dumbbells, bars and plates from Trainer's
-        preferences and the first day of the week from the user's. This shows
-        what each holds. It never fails a run, and goes once #12 is built.
+    def trainer_preferences(self) -> dict:
+        """Trainer's preferences: `availableWeights` holds the dumbbells, bars and plates weights round to."""
+        return self._object("hevy_trainer/user_preferences")
+
+    def user_preferences(self) -> dict:
+        """The user's preferences: `username`, `weight_unit` and `first_weekday`."""
+        return self._object("v2/user_preferences")
+
+    def workouts_since(self, username: str, since: datetime) -> list[dict]:
+        """The user's workouts from `since` on, newest first, each with its `trainer_workout_template_id`.
+
+        The public API's workouts don't say which Trainer template they came
+        from, and the app's history for an exercise is that template's alone.
         """
-        for path in ("hevy_trainer/user_preferences", "v2/user_preferences"):
-            try:
-                body, _ = request("GET", f"{BASE}/{path}", headers=self._headers())
-            except (HttpError, OSError) as e:
-                log.warning("%s unavailable: %s", path, e)
-                continue
-            log.info("%s, strings hidden: %s", path, json.dumps(shape(body), separators=(",", ":")))
+        out: list[dict] = []
+        for page in range(MAX_WORKOUT_PAGES):
+            body = self._get("user_workouts_paged",
+                             {"username": username, "limit": WORKOUT_PAGE, "offset": page * WORKOUT_PAGE})
+            batch = body.get("workouts") if isinstance(body, dict) else None
+            if not isinstance(batch, list) or not batch:
+                break
+            out.extend(w for w in batch if (start_of(w) or since) >= since)
+            oldest = start_of(batch[-1])
+            if len(batch) < WORKOUT_PAGE or (oldest is not None and oldest < since):
+                break
+        return out

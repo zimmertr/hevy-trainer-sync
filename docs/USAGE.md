@@ -4,17 +4,18 @@ Once it is deployed there is nothing to run. This page is what you see, what you
 
 ## A normal week
 
-- **In Hevy**, the folder `Hevy Trainer` holds one routine per Trainer template, named for the program week: `Upper W8`, `Lower W8`. Don't edit them; the next run overwrites them. Don't delete them either: hevy2garmin needs them to keep the watch's copy. Record: [0014](architectural-decision-records/0014-routines-stay-in-hevy.md).
+- **In Hevy**, the folder `Hevy Trainer` holds one routine per Trainer template, named for Trainer's cycle and week as the app shows them: `Upper C2 W2`, `Lower C2 W2`. Don't edit them; the next run overwrites them. Don't delete them either: hevy2garmin needs them to keep the watch's copy. Record: [0014](architectural-decision-records/0014-routines-stay-in-hevy.md).
 - **On the watch**, Trainer's next workout is on today's date in the training calendar after the phone next syncs, and it's the only one this tool puts there. When the routine changes, the watch gets the new version in its place, not a second copy. Record: [0040](architectural-decision-records/0040-the-calendar-carries-workouts-to-the-watch.md).
 - **To train**, start Trainer's workout in Hevy on the phone, and on the watch press the activity button, pick Strength, and say yes when it offers today's workout, the way it does for a Runna run. The watch walks you through the planned exercises and sets. Log the real reps and weights in Hevy as usual.
 - **During the session**, what the watch records is what Strava keeps, forever. Follow the planned sets, and if you change a weight or do different reps, enter it on the watch as well as in Hevy. Record: [0020](architectural-decision-records/0020-the-watch-recording-is-what-strava-keeps.md).
 - **After you finish**, there is nothing to do. The watch's activity reaches Garmin and Strava at its next phone sync, however late that is. The poller waits for it, then has hevy2garmin merge Hevy's sets into it, so Garmin Connect has them within a minute or two. Strava does not change, and nothing else is ever posted. A session the watch didn't record stays in Hevy only. Don't press Sync Now on the dashboard: it would upload that session, or one the watch hasn't synced yet, as a second activity. Records: [0001](architectural-decision-records/0001-merge-into-the-watch-activity.md), [0039](architectural-decision-records/0039-merge-only-after-the-watch-activity.md).
-- **A minute or two after Finish in Hevy**, the poller has the mirror run: the routine you just trained gets the weights you lifted, and the next workout goes on today's date, so the watch has it at its next sync. Record: [0041](architectural-decision-records/0041-run-the-mirror-after-each-save.md).
-- **On Monday**, the routines are renamed for the new week, `W9` and so on, and reach the watch the same way. Record: [0010](architectural-decision-records/0010-program-week-in-names.md).
+- **A minute or two after Finish in Hevy**, the poller has the mirror run: the routine you just trained gets what Trainer prescribes for next time, worked out from what you lifted by the app's own rules, and the next workout goes on today's date, so the watch has it at its next sync. Record: [0041](architectural-decision-records/0041-run-the-mirror-after-each-save.md).
+- **When the week turns** (midnight on your first weekday, Monday for TJ), the first run after it, by seven past, renames the routines for the new week, `C2 W3` and so on, and they reach the watch the same way. Record: [0042](architectural-decision-records/0042-trainer-prescriptions-by-the-apps-rules.md).
+- **If the run log and the app disagree** on a weight, the app may have changed its rules. The weekly Hevy App Check opens an issue when it sees that.
 
 ## Is it working?
 
-The quickest check is the name on the watch. If it still says last week's number on a Monday afternoon, runs are failing. Then:
+The quickest check is the name on the watch. If it still says last week's number on a Monday morning, runs are failing. The run log lists every exercise's prescription (`Side Bend (Dumbbell): 40 lbs (increase)`), to compare with the app. Then:
 
 ```sh
 kubectl -n hevy2garmin-system get jobs

@@ -4,11 +4,13 @@ import argparse
 import logging
 import os
 import sys
+from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
 
-from . import build, db, schedule, state
+from . import build, db, library, schedule, state, trainer_rules
 from .garmin import Garmin
 from .h2g import Dashboard
-from .hevy_private import Session
+from .hevy_private import Session, parse_time
 from .hevy_public import Client
 from .http import HttpError
 
@@ -56,6 +58,46 @@ def send_to_device(database_url: str, dashboard: Dashboard, routine_ids: list[st
             failed += 1
             log.error("send to device failed for %s: %s", title, e)
     return 1 if failed else 0
+
+
+def describe(p: build.Planned) -> str:
+    """One prescription as the log shows it: '40 lbs (increase), warm-ups 15, 25' or '15-20 reps (increase)'."""
+    if p.rep_range:
+        return f"{p.rep_range['start']}-{p.rep_range['end']} reps ({p.direction})"
+    text = f"{p.weight:g} {p.unit} ({p.direction})"
+    if p.warmups_kg:
+        text += ", warm-ups " + ", ".join(f"{trainer_rules.in_unit(w, p.unit):g}" for w in p.warmups_kg)
+    return text
+
+
+def trainer_plan(session: Session, program: dict, templates: list[dict], now: datetime):
+    """Trainer's cycle, week and prescriptions, worked out as the app does (trainer_rules.py, record 0042)."""
+    user = session.user_preferences()
+    available = session.trainer_preferences().get("availableWeights") or {}
+    unit = "lbs" if user.get("weight_unit") == "lbs" else "kg"
+    first = user.get("first_weekday") or "monday"
+    deloads = bool(program.get("deloads_enabled"))
+    tz = ZoneInfo(env("TZ", "UTC"))
+    created = parse_time(program.get("created_at"))
+    if created is None:
+        log.warning("the program has no start date; no week in the names and no prescriptions")
+        return None, None, {}
+
+    def week_of(dt: datetime) -> int:
+        return trainer_rules.calendar_week(created, dt, first, tz)
+
+    week = week_of(now)
+    cycle, week_in_cycle = trainer_rules.cycle_number(week, deloads), trainer_rules.week_of_cycle(week, deloads)
+    log.info("program week %d (started %s, weeks from %s): cycle %d, week %d of %d", week,
+             program.get("created_at"), first, cycle, week_in_cycle, trainer_rules.weeks_in_cycle(deloads))
+    username = user.get("username")
+    if not username:
+        raise RuntimeError("the user's preferences carry no username; cannot read their workouts")
+    workouts = session.workouts_since(username, created)
+    log.info("%d workouts since the program started", len(workouts))
+    planned = build.plan(templates, workouts, available, unit, trainer_rules.is_deload_week(week, deloads),
+                         lambda dt: trainer_rules.is_deload_week(week_of(dt), deloads))
+    return cycle, week_in_cycle, planned
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -118,15 +160,21 @@ def run(args: argparse.Namespace, state_file: str) -> int:
         {r["title"]: r for r in hevy.routines() if r.get("folder_id") == folder_id} if folder_id is not None else {}
     )
 
+    cycle, week, planned = trainer_plan(session, program, templates, datetime.now(UTC))
+
     # Every routine this job owns, by base title, whether it existed or was just made.
-    week = build.program_week(program.get("created_at"))
-    log.info("program week %s (started %s)", week, program.get("created_at"))
     managed: dict[str, str] = {}
     changed: list[str] = []
     for t in templates:
         base = build.title_from_key(t["key"])
+        mine = planned.get(str(t.get("id")), {})
         payload = build.routine_from_template(t, folder_id, weights, NOTES,
-                                              title_override=build.title(t["key"], week))
+                                              title_override=build.title(t["key"], cycle, week), planned=mine)
+        for ex in sorted(t.get("exercises", []), key=lambda e: e.get("index", 0)):
+            tid = ex["exercise_template_id"]
+            name = (library.EXERCISES.get(tid) or (tid,))[0]
+            p = mine.get(tid)
+            log.info("  %s: %s", name, describe(p) if p else "no Trainer prescription; the last logged weight")
         # Matched by base title, so a routine named for last week is renamed, not duplicated.
         current = next((r for title, r in existing.items() if build.is_titled_from(title, t["key"])), None)
         if current:
