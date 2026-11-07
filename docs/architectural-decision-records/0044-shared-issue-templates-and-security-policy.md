@@ -5,7 +5,7 @@
 - Decider: TJ, in zimmertr/yggdrasil#8 step 6.17: "Other repos are open game", then "Yes" to every repo using the shared templates
 - Issues and PRs: zimmertr/yggdrasil#8 (step 6.17)
 - Cited in code as: none
-- Guide: [`CLAUDE.md`](../../CLAUDE.md), the security scanning bullet
+- Guide: [`CLAUDE.md`](../../CLAUDE.md), the bullet on the issue templates and `SECURITY.md`
 
 ## Context
 
