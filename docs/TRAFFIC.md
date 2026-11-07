@@ -8,6 +8,7 @@ Nothing calls this tool. [CICD.md](CICD.md) covers how it gets deployed. This pa
 |---|---|---|---|
 | 1 | Hevy private `POST /auth/refresh_token` | When the stored `expires_at` has passed, which is almost every hourly run since the token lasts about 30 minutes, or when step 2 answers 401 | 0 to 2 |
 | 2 | Hevy private `GET /hevy_trainer/v3/program` | Every run (again after a refresh) | 1 or 2 |
+| 2a | Hevy private `GET /hevy_trainer/program` | Every run, only to log its shape until #12 is answered. A failure is logged and ignored | 1 |
 | 3 | Hevy public `GET /v1/workouts` | Every run, until every exercise has a weight or `WORKOUT_PAGES` runs out | 1 to 4 |
 | 4 | Hevy public `GET /v1/routine_folders` | Every run | 1 or more pages |
 | 5 | Hevy public `POST /v1/routine_folders` | Only when the folder is missing | 0 or 1 |

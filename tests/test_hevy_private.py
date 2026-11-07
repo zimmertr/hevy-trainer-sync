@@ -8,6 +8,8 @@ FUTURE = "2999-01-01T00:00:00.000Z"
 PAST = "2000-01-01T00:00:00.000Z"
 PROGRAM_URL = "https://api.hevyapp.com/hevy_trainer/v3/program"
 REFRESH_URL = "https://api.hevyapp.com/auth/refresh_token"
+LEGACY_URL = "https://api.hevyapp.com/hevy_trainer/program"
+LEGACY = ({"weight_kg": 22.68}, {})
 
 
 def session(**tokens):
@@ -76,20 +78,25 @@ class GetProgramTest(unittest.TestCase):
     QUERY = {"client_program_updated_at": hevy_private.EPOCH, "client_next_workout_updated_at": hevy_private.EPOCH}
 
     def test_valid_token_goes_straight_to_the_program(self, request):
-        request.return_value = ({"program": {"id": "p"}}, {})
+        request.side_effect = [({"program": {"id": "p"}}, {}), LEGACY]
         s, persisted = session(access_token="A", refresh_token="R", expires_at=FUTURE)
         self.assertEqual(s.get_program(), {"id": "p"})
-        request.assert_called_once()
-        self.assertEqual(request.call_args.args, ("GET", PROGRAM_URL))
-        self.assertEqual(request.call_args.kwargs["query"], self.QUERY)
-        self.assertEqual(request.call_args.kwargs["headers"]["Authorization"], "Bearer A")
+        first = request.call_args_list[0]
+        self.assertEqual(first.args, ("GET", PROGRAM_URL))
+        self.assertEqual(first.kwargs["query"], self.QUERY)
+        self.assertEqual(first.kwargs["headers"]["Authorization"], "Bearer A")
+        self.assertEqual([c.args[1] for c in request.call_args_list], [PROGRAM_URL, LEGACY_URL])
         self.assertEqual(persisted, [])
 
     def test_expired_token_is_refreshed_first(self, request):
-        request.side_effect = [({"access_token": "A2", "expires_at": FUTURE}, {}), ({"program": {"id": "p"}}, {})]
+        request.side_effect = [
+            ({"access_token": "A2", "expires_at": FUTURE}, {}),
+            ({"program": {"id": "p"}}, {}),
+            LEGACY,
+        ]
         s, persisted = session(access_token="A", refresh_token="R", expires_at=PAST)
         self.assertEqual(s.get_program(), {"id": "p"})
-        self.assertEqual([c.args[1] for c in request.call_args_list], [REFRESH_URL, PROGRAM_URL])
+        self.assertEqual([c.args[1] for c in request.call_args_list], [REFRESH_URL, PROGRAM_URL, LEGACY_URL])
         self.assertEqual(request.call_args.kwargs["headers"]["Authorization"], "Bearer A2")
         self.assertEqual(len(persisted), 1)
 
@@ -98,10 +105,13 @@ class GetProgramTest(unittest.TestCase):
             HttpError(401, "expired", PROGRAM_URL),
             ({"access_token": "A2", "expires_at": FUTURE}, {}),
             ({"program": {"id": "p"}}, {}),
+            LEGACY,
         ]
         s, persisted = session(access_token="A", refresh_token="R", expires_at=FUTURE)
         self.assertEqual(s.get_program(), {"id": "p"})
-        self.assertEqual([c.args[1] for c in request.call_args_list], [PROGRAM_URL, REFRESH_URL, PROGRAM_URL])
+        self.assertEqual(
+            [c.args[1] for c in request.call_args_list], [PROGRAM_URL, REFRESH_URL, PROGRAM_URL, LEGACY_URL]
+        )
         self.assertEqual(request.call_args.kwargs["headers"]["Authorization"], "Bearer A2")
         self.assertEqual(persisted[0]["access_token"], "A2")
 
@@ -115,12 +125,22 @@ class GetProgramTest(unittest.TestCase):
         self.assertEqual(persisted, [])
 
     def test_the_reply_is_logged_without_its_strings(self, request):
-        request.return_value = ({"program": {"id": "p"}, "next_workout": {"weight_kg": 22.68, "title": "Fly"}}, {})
+        request.side_effect = [({"program": {"id": "p"}, "next_workout": {"weight_kg": 22.68, "title": "Fly"}}, {}),
+                               ({"weeks": [{"title": "Fly", "kg": 20}]}, {})]
         s, _ = session(access_token="A", refresh_token="R", expires_at=FUTURE)
         with self.assertLogs("hevy-trainer-sync.trainer") as logs:
             s.get_program()
         self.assertIn('"next_workout":{"weight_kg":22.68,"title":"str"}', logs.output[0])
         self.assertNotIn("Fly", logs.output[0])
+        self.assertIn('legacy trainer reply, strings hidden: {"weeks":[{"title":"str","kg":20}]}', logs.output[1])
+
+    def test_a_failed_legacy_read_never_fails_the_run(self, request):
+        for failure in (HttpError(404, "gone", LEGACY_URL), OSError("reset")):
+            request.side_effect = [({"program": {"id": "p"}}, {}), failure]
+            s, _ = session(access_token="A", refresh_token="R", expires_at=FUTURE)
+            with self.assertLogs("hevy-trainer-sync.trainer", level="WARNING") as logs:
+                self.assertEqual(s.get_program(), {"id": "p"})
+            self.assertIn("legacy trainer reply unavailable", logs.output[0])
 
     def test_unexpected_shape_is_an_error(self, request):
         for answer in (None, {"program": None}, {"program": []}):

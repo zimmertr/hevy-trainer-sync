@@ -1,6 +1,7 @@
 """Hevy's private API: the one the app uses, not the documented v1 API.
 
-Only two calls are made. The endpoints and headers come from the inventory in
+Only two calls are made, plus a third that is logged and never used
+(`log_legacy_program`). The endpoints and headers come from the inventory in
 github.com/LovelessCodes/hevy-mcp-unofficial and were checked live on 4 Nov 2026.
 Hevy can change or close them without notice.
 """
@@ -90,4 +91,19 @@ class Session:
         if not isinstance(body, dict) or not isinstance(body.get("program"), dict):
             raise RuntimeError(f"unexpected program response: {str(body)[:200]}")
         log.info("trainer reply, strings hidden: %s", json.dumps(shape(body), separators=(",", ":")))
+        self.log_legacy_program()
         return body["program"]
+
+    def log_legacy_program(self) -> None:
+        """Log the shape of the older `hevy_trainer/program` reply, which hevy.com's Trainer page still reads.
+
+        The v3 reply has no prescribed weights and not the cycle week the app
+        shows (#12), so this checks whether the older one carries either. It
+        never fails a run, and goes once that question is answered.
+        """
+        try:
+            body, _ = request("GET", f"{BASE}/hevy_trainer/program", headers=self._headers())
+        except (HttpError, OSError) as e:
+            log.warning("legacy trainer reply unavailable: %s", e)
+            return
+        log.info("legacy trainer reply, strings hidden: %s", json.dumps(shape(body), separators=(",", ":")))
