@@ -2,7 +2,7 @@
 
 - Status: Accepted. Supersedes 0013 in part (where the templates live)
 - Date: 2026-11-07
-- Decider: TJ ("Yggdrasil should be shipping defaults to .github repos for each account/org. Then repos should be able to override those with their own repo configs. ... Other repos are open game")
+- Decider: TJ, in zimmertr/yggdrasil#8 step 6.17: "Other repos are open game", then "Yes" to every repo using the shared templates
 - Issues and PRs: zimmertr/yggdrasil#8 (step 6.17)
 - Cited in code as: none
 - Guide: [`CLAUDE.md`](../../CLAUDE.md), the security scanning bullet
@@ -22,7 +22,7 @@ This repo kept its own `.github/ISSUE_TEMPLATE/` and `SECURITY.md`, copied from 
 
 ## Alternatives rejected
 
-- **Keep the tailored copies:** a repo may override the shared files, but TJ kept overrides only in Bluebird and TJs-Kubernetes-Service.
+- **Keep the tailored copies:** no repo keeps its own templates, and only Bluebird keeps its own `SECURITY.md`, for its live site (zimmertr/yggdrasil record 0049).
 
 ## Consequences
 
